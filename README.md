@@ -1,1 +1,1 @@
-# gin-starter
+# starter-gin
