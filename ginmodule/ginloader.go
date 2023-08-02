@@ -2,7 +2,6 @@ package ginmodule
 
 import (
 	"context"
-	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-acexy/starter-parent/parentmodule/declaration"
 	"net/http"
@@ -12,9 +11,16 @@ import (
 type GinModule struct {
 	server *http.Server
 
-	Routers []Router
-	Address string // ip:port
+	// 自定义Module配置
+	GinModuleConfig *declaration.ModuleConfig
 
+	// * 注册业务路由
+	Routers []Router
+
+	// * 注册服务监听地址 :8080 (默认)
+	ListenAddress string // ip:port
+
+	// gin config
 	DebugModule            bool
 	MaxMultipartMemory     int64
 	HandleMethodNotAllowed bool
@@ -22,18 +28,19 @@ type GinModule struct {
 }
 
 func (g *GinModule) ModuleConfig() *declaration.ModuleConfig {
+	if g.GinModuleConfig != nil {
+		return g.GinModuleConfig
+	}
 	return &declaration.ModuleConfig{
-		ModuleName: "Gin",
+		ModuleName:               "Gin",
+		UnregisterPriority:       0,
+		UnregisterAllowAsync:     true,
+		UnregisterMaxWaitSeconds: 30,
 	}
 }
 
 func (g *GinModule) Interceptor() *func(instance interface{}) {
-	interceptor := func(ginClient interface{}) {
-		if engine, ok := ginClient.(*gin.Engine); ok {
-			fmt.Println(engine.BasePath())
-		}
-	}
-	return &interceptor
+	return nil
 }
 
 func (g *GinModule) Register(interceptor *func(instance interface{})) error {
@@ -45,7 +52,7 @@ func (g *GinModule) Register(interceptor *func(instance interface{})) error {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
-	ginEngin := gin.Default()
+	ginEngin := gin.New()
 
 	if interceptor != nil {
 		(*interceptor)(ginEngin)
@@ -64,15 +71,21 @@ func (g *GinModule) Register(interceptor *func(instance interface{})) error {
 		loadRouter(ginEngin, g.Routers)
 	}
 
+	if g.ListenAddress == "" {
+		g.ListenAddress = ":8080"
+	}
+
 	g.server = &http.Server{
-		Addr:    g.Address,
+		Addr:    g.ListenAddress,
 		Handler: ginEngin,
 	}
+
 	go func() {
 		if err = g.server.ListenAndServe(); err != nil {
 			return
 		}
 	}()
+
 	return err
 }
 

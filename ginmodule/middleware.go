@@ -6,6 +6,18 @@ import (
 	"runtime/debug"
 )
 
+var httpCodeWithStatus map[int]StatusCode
+
+func init() {
+	httpCodeWithStatus = make(map[int]StatusCode, 6)
+	httpCodeWithStatus[http.StatusBadRequest] = statusCodeBadRequestParameters
+	httpCodeWithStatus[http.StatusForbidden] = statusCodeForbidden
+	httpCodeWithStatus[http.StatusNotFound] = statusCodeNotFound
+	httpCodeWithStatus[http.StatusMethodNotAllowed] = statusCodeMethodNotAllowed
+	httpCodeWithStatus[http.StatusUnsupportedMediaType] = statusCodeMediaTypeNotAllowed
+	httpCodeWithStatus[http.StatusRequestEntityTooLarge] = statusCodeUploadLimitExceeded
+}
+
 func BasicRecover() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		defer func() {
@@ -14,16 +26,12 @@ func BasicRecover() gin.HandlerFunc {
 				ctx.AbortWithStatusJSON(http.StatusOK, NewException())
 			} else {
 				statusCode := ctx.Writer.Status()
-				if statusCode != 200 {
-					switch statusCode {
-					case 404:
-						ctx.AbortWithStatusJSON(http.StatusOK, NewError(statusCodeNotFound))
-					case 403:
-						ctx.AbortWithStatusJSON(http.StatusOK, NewError(statusCodeForbidden))
-					case 405:
-						ctx.AbortWithStatusJSON(http.StatusOK, NewError(statusCodeMethodNotAllowed))
-					default:
+				if statusCode != http.StatusOK {
+					v, ok := httpCodeWithStatus[statusCode]
+					if !ok {
 						ctx.AbortWithStatusJSON(http.StatusOK, NewException())
+					} else {
+						ctx.AbortWithStatusJSON(http.StatusOK, v)
 					}
 				}
 			}

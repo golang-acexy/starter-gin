@@ -27,22 +27,17 @@ func loadRouter(gin *gin.Engine, routers []Router) {
 }
 
 func (g *GinWrapper) handler(methods []string, path string, handlerWrapper ...HandlerWrapper) {
-	if len(handlerWrapper) > 0 {
-		handlers := make([]gin.HandlerFunc, len(handlerWrapper))
-		for i, handler := range handlerWrapper {
-			handlers[i] = func(context *gin.Context) {
-				response, err := handler(&Request{context})
-				if err != nil {
-					context.AbortWithStatusJSON(http.StatusOK, NewException())
-					return
-				}
-				context.JSON(http.StatusOK, response)
+	handlers := make([]gin.HandlerFunc, len(handlerWrapper))
+	for i, handler := range handlerWrapper {
+		handlers[i] = func(context *gin.Context) {
+			response, err := handler(&Request{context})
+			if err != nil {
+				return
 			}
+			context.JSON(http.StatusOK, response)
 		}
-		g.routerGroup.Match(methods, path, handlers...)
-	} else {
-		g.routerGroup.Match(methods, path)
 	}
+	g.routerGroup.Match(methods, path, handlers...)
 }
 
 func (g *GinWrapper) POST(path string, handler ...HandlerWrapper) {

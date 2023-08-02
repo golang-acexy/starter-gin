@@ -18,22 +18,28 @@ func (r *Request) GinContext() *gin.Context {
 	return r.ctx
 }
 
-func (r *Request) Param(key string) string {
+func (r *Request) RequestIP() string {
+	return r.ctx.ClientIP()
+}
+
+// UriPathParam 获取path路径参数 /:id/
+func (r *Request) UriPathParam(key string) string {
 	return r.ctx.Param(key)
 }
 
-func (r *Request) Params(keys ...string) map[string]string {
+func (r *Request) UriPathParams(keys ...string) map[string]string {
 	result := make(map[string]string)
 	if len(keys) > 0 {
 		for _, value := range keys {
-			result[value] = r.Param(value)
+			result[value] = r.UriPathParam(value)
 		}
 	}
 	return result
 }
 
-func (r *Request) BindUri(object any) error {
-	return r.ctx.ShouldBindUri(object)
+// BindUriPathParams 绑定结构体用于接收UriPath参数 使用指针参数
+func (r *Request) BindUriPathParams(object any) {
+	_ = r.ctx.ShouldBindUri(object)
 }
 
 func (r *Request) BindJson(object any) error {

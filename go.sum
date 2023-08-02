@@ -26,14 +26,8 @@ github.com/go-playground/validator/v10 v10.14.1 h1:9c50NUPC30zyuKprjL3vNZ0m5oG+j
 github.com/go-playground/validator/v10 v10.14.1/go.mod h1:9iXMNT7sEkjXb0I+enO7QXmzG6QCsPWY4zveKFVRSyU=
 github.com/goccy/go-json v0.10.2 h1:CrxCmQqYDkv1z7lO7Wbh2HN93uovUHgrECaO5ZrCXAU=
 github.com/goccy/go-json v0.10.2/go.mod h1:6MelG93GURQebXPDq3khkgXZkazVtN9CRI+MGFi0w8I=
-github.com/golang-acexy/starter-parent v0.0.0-20230801111223-82e52e441401 h1:NvqZ+zrUnXDIoE9ftKMU4jsnK/B9twVn+MtlO7PfyQ8=
-github.com/golang-acexy/starter-parent v0.0.0-20230801111223-82e52e441401/go.mod h1:ks9dpAnV1o6xqQOA0Tef2w5TJLcHr8FxH5uebtqxT4o=
-github.com/golang-acexy/starter-parent v0.0.0-20230801112714-92010933be60 h1:Q7EpikJbY9Mf3FN/mkyGXc3f+EnQM6yi9bzQ8JdD5xA=
-github.com/golang-acexy/starter-parent v0.0.0-20230801112714-92010933be60/go.mod h1:ks9dpAnV1o6xqQOA0Tef2w5TJLcHr8FxH5uebtqxT4o=
-github.com/golang-acexy/starter-parent v0.0.0-20230801121713-b7ff96c8d634 h1:IUhdEXMrg+DIkL8Mf4HiiNvmHw91j+H3T+d2m5NsN6c=
-github.com/golang-acexy/starter-parent v0.0.0-20230801121713-b7ff96c8d634/go.mod h1:ks9dpAnV1o6xqQOA0Tef2w5TJLcHr8FxH5uebtqxT4o=
-github.com/golang-acexy/starter-parent v0.0.0-20230801122531-9feb8104b209 h1:Otjrx9cPfaY+IKeT/1xE7T6ukx0ESd4gN8HyCgm7YwU=
-github.com/golang-acexy/starter-parent v0.0.0-20230801122531-9feb8104b209/go.mod h1:ks9dpAnV1o6xqQOA0Tef2w5TJLcHr8FxH5uebtqxT4o=
+github.com/golang-acexy/starter-parent v0.0.0-20230802064427-5bec9a8fd9a5 h1:8e6FyjwWaR7Jeovzgyl5Mi/7vMPTSpVTiVnbmNsyJI4=
+github.com/golang-acexy/starter-parent v0.0.0-20230802064427-5bec9a8fd9a5/go.mod h1:ks9dpAnV1o6xqQOA0Tef2w5TJLcHr8FxH5uebtqxT4o=
 github.com/golang/protobuf v1.5.0/go.mod h1:FsONVRAS9T7sI+LIUmWTfcYkHO4aIWwzhcaSAoJOfIk=
 github.com/google/go-cmp v0.5.5 h1:Khx7svrCpmxxtHBq5j2mp/xVjsi8hQMfNLvJFAlrGgU=
 github.com/google/go-cmp v0.5.5/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/gNBxE=

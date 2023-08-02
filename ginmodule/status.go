@@ -54,6 +54,11 @@ var statusCodeWithMessage = map[StatusCode]StatusMessage{
 	statusCodeBadRequestParameters: statusMessageBadRequestParameters,
 }
 
+const (
+	bizErrorCodeSuccess    = 200
+	bizErrorMessageSuccess = "Success"
+)
+
 func GetStatusMessage(statusCode StatusCode) StatusMessage {
 	return statusCodeWithMessage[statusCode]
 }

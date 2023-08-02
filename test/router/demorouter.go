@@ -32,7 +32,7 @@ func (d *DemoRouter) error() func(request *ginmodule.Request) (*ginmodule.Respon
 
 func (d *DemoRouter) hold() func(request *ginmodule.Request) (*ginmodule.Response, error) {
 	return func(request *ginmodule.Request) (*ginmodule.Response, error) {
-		time.Sleep(time.Hour)
-		return nil, nil
+		time.Sleep(time.Second * 5)
+		return ginmodule.NewSuccess(), nil
 	}
 }

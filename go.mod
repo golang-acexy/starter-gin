@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/gin-gonic/gin v1.9.1
-	github.com/golang-acexy/starter-parent v0.0.0-20230801122531-9feb8104b209
+	github.com/golang-acexy/starter-parent v0.0.0-20230802064427-5bec9a8fd9a5
 )
 
 require (
