@@ -13,6 +13,7 @@ type GinModule struct {
 
 	// 自定义Module配置
 	GinModuleConfig *declaration.ModuleConfig
+	GinInterceptor  *func(instance interface{})
 
 	// * 注册业务路由
 	Routers []Router
@@ -40,7 +41,7 @@ func (g *GinModule) ModuleConfig() *declaration.ModuleConfig {
 }
 
 func (g *GinModule) Interceptor() *func(instance interface{}) {
-	return nil
+	return g.GinInterceptor
 }
 
 func (g *GinModule) Register(interceptor *func(instance interface{})) error {
