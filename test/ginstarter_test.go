@@ -2,9 +2,11 @@ package test
 
 import (
 	"fmt"
+	"github.com/gin-gonic/gin"
 	"github.com/golang-acexy/starter-gin/ginmodule"
 	"github.com/golang-acexy/starter-gin/test/router"
 	"github.com/golang-acexy/starter-parent/parentmodule/declaration"
+	"net/http"
 	"testing"
 	"time"
 )
@@ -13,6 +15,15 @@ var moduleLoaders []declaration.ModuleLoader
 
 func init() {
 
+	interceptor := func(instance interface{}) {
+		engine := instance.(*gin.Engine)
+
+		// 注册一个伪探活服务
+		engine.GET("/ping", func(context *gin.Context) {
+			context.String(http.StatusOK, "alive")
+		})
+	}
+
 	moduleLoaders = []declaration.ModuleLoader{&ginmodule.GinModule{
 		ListenAddress: ":8118",
 		DebugModule:   true,
@@ -20,6 +31,7 @@ func init() {
 			&router.DemoRouter{},
 			&router.ParamRouter{},
 		},
+		GinInterceptor: &interceptor,
 	}}
 
 	fmt.Println(moduleLoaders)
