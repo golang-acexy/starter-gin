@@ -40,6 +40,8 @@ func (g *GinModule) ModuleConfig() *declaration.ModuleConfig {
 	}
 }
 
+// Interceptor 初始化gin原始实例拦截器
+// request instance: *gin.Engine
 func (g *GinModule) Interceptor() *func(instance interface{}) {
 	return g.GinInterceptor
 }
