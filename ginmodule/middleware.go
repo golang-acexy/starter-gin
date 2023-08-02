@@ -25,7 +25,7 @@ func BasicRecover() gin.HandlerFunc {
 
 			if r := recover(); r != nil {
 				// recover未被处理的系统异常
-				fmt.Printf("statusCode %d %+v\n", statusCode, r)
+				fmt.Printf("originStatusCode %d %+v\n", statusCode, r)
 				if http.StatusOK == statusCode {
 					ctx.AbortWithStatusJSON(http.StatusOK, ResponseException())
 					return

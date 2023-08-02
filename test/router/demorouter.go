@@ -19,11 +19,13 @@ func (d *DemoRouter) RouterInfo() *ginmodule.RouterInfo {
 
 func (d *DemoRouter) RegisterHandler(ginWrapper *ginmodule.GinWrapper) {
 
-	// path /demo/error 触发系统错误
+	// path /demo/error 未捕获的异常触发系统错误
 	ginWrapper.MATCH([]string{http.MethodGet, http.MethodPost}, "error", d.error())
 
-	// path /demo/exception 触发业务错误
+	// path /demo/exception 主动返回的异常触发系统错误
 	ginWrapper.GET("exception", d.exception())
+
+	// path /demo/hold 5s的请求hold
 	ginWrapper.GET("hold", d.hold())
 }
 

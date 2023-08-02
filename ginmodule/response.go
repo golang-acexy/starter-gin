@@ -1,10 +1,10 @@
 package ginmodule
 
 type Status struct {
-	StatusCode      StatusCode      `json:"statusCode"`
-	StatusMessage   StatusMessage   `json:"statusMessage"`
-	BizErrorCode    BizErrorCode    `json:"bizErrorCode"`
-	BizErrorMessage BizErrorMessage `json:"bizErrorMessage"`
+	StatusCode      StatusCode       `json:"statusCode"`
+	StatusMessage   StatusMessage    `json:"statusMessage"`
+	BizErrorCode    *BizErrorCode    `json:"bizErrorCode"`
+	BizErrorMessage *BizErrorMessage `json:"bizErrorMessage"`
 }
 
 type Response struct {
@@ -17,8 +17,8 @@ func ResponseSuccess(data ...any) *Response {
 		Status: &Status{
 			StatusCode:      statusCodeSuccess,
 			StatusMessage:   statusMessageSuccess,
-			BizErrorCode:    bizErrorCodeSuccess,
-			BizErrorMessage: bizErrorMessageSuccess,
+			BizErrorCode:    &bizErrorCodeSuccess,
+			BizErrorMessage: &bizErrorMessageSuccess,
 		},
 	}
 	if len(data) > 0 {
@@ -47,7 +47,7 @@ func ResponseError(statusCode StatusCode) *Response {
 	}
 }
 
-func ResponseBizError(bizErrorCode BizErrorCode, bizErrorMessage BizErrorMessage) *Response {
+func ResponseBizError(bizErrorCode *BizErrorCode, bizErrorMessage *BizErrorMessage) *Response {
 	return &Response{
 		Status: &Status{
 			StatusCode:      statusCodeSuccess,
