@@ -32,9 +32,11 @@ func (g *GinWrapper) handler(methods []string, path string, handlerWrapper ...Ha
 		handlers[i] = func(context *gin.Context) {
 			response, err := handler(&Request{context})
 			if err != nil {
-				return
+				panic(err)
 			}
-			context.JSON(http.StatusOK, response)
+			if !context.IsAborted() {
+				context.JSON(http.StatusOK, response)
+			}
 		}
 	}
 	g.routerGroup.Match(methods, path, handlers...)

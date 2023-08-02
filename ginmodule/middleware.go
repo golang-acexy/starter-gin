@@ -1,9 +1,9 @@
 package ginmodule
 
 import (
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"net/http"
-	"runtime/debug"
 )
 
 var httpCodeWithStatus map[int]StatusCode
@@ -21,18 +21,22 @@ func init() {
 func BasicRecover() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		defer func() {
+			statusCode := ctx.Writer.Status()
+
 			if r := recover(); r != nil {
-				debug.PrintStack()
-				ctx.AbortWithStatusJSON(http.StatusOK, NewException())
-			} else {
-				statusCode := ctx.Writer.Status()
-				if statusCode != http.StatusOK {
-					v, ok := httpCodeWithStatus[statusCode]
-					if !ok {
-						ctx.AbortWithStatusJSON(http.StatusOK, NewException())
-					} else {
-						ctx.AbortWithStatusJSON(http.StatusOK, v)
-					}
+				// recover未被处理的系统异常
+				fmt.Printf("statusCode %d %+v\n", statusCode, r)
+				if http.StatusOK == statusCode {
+					ctx.AbortWithStatusJSON(http.StatusOK, ResponseException())
+					return
+				}
+			}
+			if statusCode != http.StatusOK {
+				v, ok := httpCodeWithStatus[statusCode]
+				if !ok {
+					ctx.AbortWithStatusJSON(http.StatusOK, ResponseException())
+				} else {
+					ctx.AbortWithStatusJSON(http.StatusOK, ResponseError(v))
 				}
 			}
 		}()

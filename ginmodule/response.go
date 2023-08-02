@@ -12,7 +12,7 @@ type Response struct {
 	Data   any     `json:"data"`
 }
 
-func NewSuccess(data ...any) *Response {
+func ResponseSuccess(data ...any) *Response {
 	response := Response{
 		Status: &Status{
 			StatusCode:      statusCodeSuccess,
@@ -27,8 +27,8 @@ func NewSuccess(data ...any) *Response {
 	return &response
 }
 
-// NewException 系统异常响应
-func NewException() *Response {
+// ResponseException 系统异常响应
+func ResponseException() *Response {
 	return &Response{
 		Status: &Status{
 			StatusCode:    statusCodeException,
@@ -37,8 +37,8 @@ func NewException() *Response {
 	}
 }
 
-// NewError 其他StatusCode错误
-func NewError(statusCode StatusCode) *Response {
+// ResponseError 其他StatusCode错误
+func ResponseError(statusCode StatusCode) *Response {
 	return &Response{
 		Status: &Status{
 			StatusCode:    statusCode,
@@ -47,7 +47,7 @@ func NewError(statusCode StatusCode) *Response {
 	}
 }
 
-func NewBizError(bizErrorCode BizErrorCode, bizErrorMessage BizErrorMessage) *Response {
+func ResponseBizError(bizErrorCode BizErrorCode, bizErrorMessage BizErrorMessage) *Response {
 	return &Response{
 		Status: &Status{
 			StatusCode:      statusCodeSuccess,

@@ -3,6 +3,7 @@ package ginmodule
 import (
 	"github.com/gin-gonic/gin"
 	"mime/multipart"
+	"net/http"
 	"path/filepath"
 )
 
@@ -37,9 +38,14 @@ func (r *Request) UriPathParams(keys ...string) map[string]string {
 	return result
 }
 
-// BindUriPathParams 绑定结构体用于接收UriPath参数 使用指针参数
+// BindUriPathParams 绑定结构体用于接收UriPath参数
+// 任何异常将触发panic响应请求参数错误
 func (r *Request) BindUriPathParams(object any) {
-	_ = r.ctx.ShouldBindUri(object)
+	err := r.ctx.ShouldBindUri(object)
+	if err != nil {
+		r.ctx.Status(http.StatusBadRequest)
+		panic(err)
+	}
 }
 
 func (r *Request) BindJson(object any) error {
