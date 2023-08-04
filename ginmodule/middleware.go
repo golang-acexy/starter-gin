@@ -1,7 +1,7 @@
 package ginmodule
 
 import (
-	"fmt"
+	"github.com/acexy/golang-toolkit/log"
 	"github.com/gin-gonic/gin"
 	"net/http"
 )
@@ -22,16 +22,15 @@ func BasicRecover() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		defer func() {
 			statusCode := ctx.Writer.Status()
-
 			if r := recover(); r != nil {
-				// recover未被处理的系统异常
-				fmt.Printf("originStatusCode %d %+v\n", statusCode, r)
+				log.Logrus().WithField("error", r).Errorln("catch exception")
 				if http.StatusOK == statusCode {
 					ctx.AbortWithStatusJSON(http.StatusOK, ResponseException())
 					return
 				}
 			}
 			if statusCode != http.StatusOK {
+				log.Logrus().Warnln("not success response statusCode =", statusCode)
 				v, ok := httpCodeWithStatus[statusCode]
 				if !ok {
 					ctx.AbortWithStatusJSON(http.StatusOK, ResponseException())

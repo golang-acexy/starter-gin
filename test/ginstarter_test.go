@@ -48,8 +48,10 @@ func TestGin(t *testing.T) {
 		fmt.Printf("%+v\n", err)
 		return
 	}
+
 	select {}
 }
+
 func TestGinUnload(t *testing.T) {
 
 	module := declaration.Module{

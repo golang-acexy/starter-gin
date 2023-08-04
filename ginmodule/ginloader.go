@@ -2,6 +2,7 @@ package ginmodule
 
 import (
 	"context"
+	"github.com/acexy/golang-toolkit/log"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-acexy/starter-parent/parentmodule/declaration"
 	"net/http"
@@ -84,6 +85,7 @@ func (g *GinModule) Register(interceptor *func(instance interface{})) error {
 	}
 
 	go func() {
+		log.Logrus().Traceln("gin will listen at ", g.ListenAddress)
 		if err = g.server.ListenAndServe(); err != nil {
 			return
 		}
