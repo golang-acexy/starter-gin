@@ -5,7 +5,7 @@ go 1.18
 require (
 	github.com/acexy/golang-toolkit v0.0.0-20230807093347-1c0dab6aed7a
 	github.com/gin-gonic/gin v1.9.1
-	github.com/golang-acexy/starter-parent v0.0.0-20230807022015-d57d84c3535f
+	github.com/golang-acexy/starter-parent v0.0.0-20230807103042-9893e7ce457d
 )
 
 require (
