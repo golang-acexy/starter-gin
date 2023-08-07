@@ -3,9 +3,9 @@ module github.com/golang-acexy/starter-gin
 go 1.18
 
 require (
-	github.com/acexy/golang-toolkit v0.0.0-20230806033004-79b4c35b4e8f
+	github.com/acexy/golang-toolkit v0.0.0-20230807093347-1c0dab6aed7a
 	github.com/gin-gonic/gin v1.9.1
-	github.com/golang-acexy/starter-parent v0.0.0-20230806033120-3ce8a7e7c999
+	github.com/golang-acexy/starter-parent v0.0.0-20230807022015-d57d84c3535f
 )
 
 require (
