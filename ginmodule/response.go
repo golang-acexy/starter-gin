@@ -15,10 +15,8 @@ type Response struct {
 func ResponseSuccess(data ...any) *Response {
 	response := Response{
 		Status: &Status{
-			StatusCode:      StatusCodeSuccess,
-			StatusMessage:   statusMessageSuccess,
-			BizErrorCode:    &bizErrorCodeSuccess,
-			BizErrorMessage: &bizErrorMessageSuccess,
+			StatusCode:    StatusCodeSuccess,
+			StatusMessage: statusMessageSuccess,
 		},
 	}
 	if len(data) > 0 {
