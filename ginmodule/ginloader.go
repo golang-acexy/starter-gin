@@ -9,8 +9,9 @@ import (
 	"time"
 )
 
+var server *http.Server
+
 type GinModule struct {
-	server *http.Server
 
 	// 自定义Module配置
 	GinModuleConfig *declaration.ModuleConfig
@@ -19,6 +20,7 @@ type GinModule struct {
 	// * 注册业务路由
 	Routers []Router
 
+	GlobalTimeout time.Duration
 	// * 注册服务监听地址 :8080 (默认)
 	ListenAddress string // ip:port
 
@@ -75,19 +77,22 @@ func (g *GinModule) Register(interceptor *func(instance interface{})) error {
 		loadRouter(ginEngin, g.Routers)
 	}
 
+	if g.GlobalTimeout == 0 {
+	}
+
 	if g.ListenAddress == "" {
 		g.ListenAddress = ":8080"
 	}
 
-	g.server = &http.Server{
+	server = &http.Server{
 		Addr:    g.ListenAddress,
 		Handler: ginEngin,
 	}
 
 	go func() {
 		log.Logrus().Traceln("gin will listen at ", g.ListenAddress)
-		if err = g.server.ListenAndServe(); err != nil {
-			return
+		if err = server.ListenAndServe(); err != nil {
+			log.Logrus().WithError(err).Traceln("gin stopped")
 		}
 	}()
 
@@ -97,7 +102,7 @@ func (g *GinModule) Register(interceptor *func(instance interface{})) error {
 func (g *GinModule) Unregister(maxWaitSeconds uint) (gracefully bool, err error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(maxWaitSeconds)*time.Second)
 	defer cancel()
-	if err = g.server.Shutdown(ctx); err != nil {
+	if err = server.Shutdown(ctx); err != nil {
 		gracefully = false
 	} else {
 		gracefully = true

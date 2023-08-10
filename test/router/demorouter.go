@@ -32,8 +32,7 @@ func (d *DemoRouter) RegisterHandler(ginWrapper *ginmodule.GinWrapper) {
 func (d *DemoRouter) error() func(request *ginmodule.Request) (*ginmodule.Response, error) {
 	return func(request *ginmodule.Request) (response *ginmodule.Response, err error) {
 		fmt.Println("invoke")
-		i := 0
-		_ = 1 / i
+		panic("error")
 		return ginmodule.ResponseSuccess(), nil
 	}
 }
@@ -46,6 +45,7 @@ func (d *DemoRouter) exception() func(request *ginmodule.Request) (*ginmodule.Re
 
 func (d *DemoRouter) hold() func(request *ginmodule.Request) (*ginmodule.Response, error) {
 	return func(request *ginmodule.Request) (*ginmodule.Response, error) {
+		fmt.Println("invoke")
 		time.Sleep(time.Second * 5)
 		return ginmodule.ResponseSuccess(), nil
 	}

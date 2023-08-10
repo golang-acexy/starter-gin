@@ -1,6 +1,7 @@
 package ginmodule
 
 import (
+	"context"
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
 	"mime/multipart"
@@ -25,6 +26,11 @@ func (r *Request) FullPath() string {
 // GinContext 获取原始Gin上下文
 func (r *Request) GinContext() *gin.Context {
 	return r.ctx
+}
+
+// GetRequestContent 获取请求中context.Context 用于后续处理超时或者取消
+func (r *Request) GetRequestContent() context.Context {
+	return r.ctx.Request.Context()
 }
 
 // RequestIP 尝试获取请求方客户端IP
