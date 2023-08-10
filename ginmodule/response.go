@@ -15,7 +15,7 @@ type Response struct {
 func ResponseSuccess(data ...any) *Response {
 	response := Response{
 		Status: &Status{
-			StatusCode:      statusCodeSuccess,
+			StatusCode:      StatusCodeSuccess,
 			StatusMessage:   statusMessageSuccess,
 			BizErrorCode:    &bizErrorCodeSuccess,
 			BizErrorMessage: &bizErrorMessageSuccess,
@@ -31,7 +31,7 @@ func ResponseSuccess(data ...any) *Response {
 func ResponseException() *Response {
 	return &Response{
 		Status: &Status{
-			StatusCode:    statusCodeException,
+			StatusCode:    StatusCodeException,
 			StatusMessage: statusMessageException,
 		},
 	}
@@ -55,8 +55,8 @@ func ResponseError(statusCode StatusCode, statusMessage ...StatusMessage) *Respo
 func ResponseBizError(bizErrorCode *BizErrorCode, bizErrorMessage *BizErrorMessage) *Response {
 	return &Response{
 		Status: &Status{
-			StatusCode:      statusCodeSuccess,
-			StatusMessage:   GetStatusMessage(statusCodeSuccess),
+			StatusCode:      StatusCodeSuccess,
+			StatusMessage:   GetStatusMessage(StatusCodeSuccess),
 			BizErrorCode:    bizErrorCode,
 			BizErrorMessage: bizErrorMessage,
 		},

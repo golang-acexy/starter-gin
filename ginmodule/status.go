@@ -6,20 +6,20 @@ type BizErrorCode int
 type BizErrorMessage string
 
 const (
-	statusCodeSuccess            = 200
-	statusCodeServiceUnavailable = 10000 - iota
-	statusCodeExceededLimit
-	statusCodeTimeout
-	statusCodeException
-	statusCodeNotFound
-	statusCodeForbidden
-	statusCodeAuthorityUnavailable
+	StatusCodeSuccess            = 200
+	StatusCodeServiceUnavailable = 10000 - iota
+	StatusCodeExceededLimit
+	StatusCodeTimeout
+	StatusCodeException
+	StatusCodeNotFound
+	StatusCodeForbidden
+	StatusCodeAuthorityUnavailable
 
-	statusCodeMethodNotAllowed = 9007 - iota
-	statusCodeMediaTypeNotAllowed
-	statusCodeUploadLimitExceeded
-	statusCodeUnauthorized
-	statusCodeBadRequestParameters
+	StatusCodeMethodNotAllowed = 9007 - iota
+	StatusCodeMediaTypeNotAllowed
+	StatusCodeUploadLimitExceeded
+	StatusCodeUnauthorized
+	StatusCodeBadRequestParameters
 )
 
 const (
@@ -40,18 +40,18 @@ const (
 )
 
 var statusCodeWithMessage = map[StatusCode]StatusMessage{
-	statusCodeServiceUnavailable:   statusMessageServiceUnavailable,
-	statusCodeExceededLimit:        statusMessageExceededLimit,
-	statusCodeTimeout:              statusMessageTimeout,
-	statusCodeException:            statusMessageException,
-	statusCodeNotFound:             statusMessageNotFound,
-	statusCodeForbidden:            statusMessageForbidden,
-	statusCodeAuthorityUnavailable: statusMessageAuthorityUnavailable,
-	statusCodeMethodNotAllowed:     statusMessageMethodNotAllowed,
-	statusCodeMediaTypeNotAllowed:  statusMessageMediaTypeNotAllowed,
-	statusCodeUploadLimitExceeded:  statusMessageUploadLimitExceeded,
-	statusCodeUnauthorized:         statusMessageUnauthorized,
-	statusCodeBadRequestParameters: statusMessageBadRequestParameters,
+	StatusCodeServiceUnavailable:   statusMessageServiceUnavailable,
+	StatusCodeExceededLimit:        statusMessageExceededLimit,
+	StatusCodeTimeout:              statusMessageTimeout,
+	StatusCodeException:            statusMessageException,
+	StatusCodeNotFound:             statusMessageNotFound,
+	StatusCodeForbidden:            statusMessageForbidden,
+	StatusCodeAuthorityUnavailable: statusMessageAuthorityUnavailable,
+	StatusCodeMethodNotAllowed:     statusMessageMethodNotAllowed,
+	StatusCodeMediaTypeNotAllowed:  statusMessageMediaTypeNotAllowed,
+	StatusCodeUploadLimitExceeded:  statusMessageUploadLimitExceeded,
+	StatusCodeUnauthorized:         statusMessageUnauthorized,
+	StatusCodeBadRequestParameters: statusMessageBadRequestParameters,
 }
 
 var (

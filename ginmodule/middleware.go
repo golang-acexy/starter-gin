@@ -10,12 +10,12 @@ var httpCodeWithStatus map[int]StatusCode
 
 func init() {
 	httpCodeWithStatus = make(map[int]StatusCode, 6)
-	httpCodeWithStatus[http.StatusBadRequest] = statusCodeBadRequestParameters
-	httpCodeWithStatus[http.StatusForbidden] = statusCodeForbidden
-	httpCodeWithStatus[http.StatusNotFound] = statusCodeNotFound
-	httpCodeWithStatus[http.StatusMethodNotAllowed] = statusCodeMethodNotAllowed
-	httpCodeWithStatus[http.StatusUnsupportedMediaType] = statusCodeMediaTypeNotAllowed
-	httpCodeWithStatus[http.StatusRequestEntityTooLarge] = statusCodeUploadLimitExceeded
+	httpCodeWithStatus[http.StatusBadRequest] = StatusCodeBadRequestParameters
+	httpCodeWithStatus[http.StatusForbidden] = StatusCodeForbidden
+	httpCodeWithStatus[http.StatusNotFound] = StatusCodeNotFound
+	httpCodeWithStatus[http.StatusMethodNotAllowed] = StatusCodeMethodNotAllowed
+	httpCodeWithStatus[http.StatusUnsupportedMediaType] = StatusCodeMediaTypeNotAllowed
+	httpCodeWithStatus[http.StatusRequestEntityTooLarge] = StatusCodeUploadLimitExceeded
 }
 
 func BasicRecover() gin.HandlerFunc {
