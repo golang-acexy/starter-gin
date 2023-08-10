@@ -23,7 +23,7 @@ func BasicRecover() gin.HandlerFunc {
 		defer func() {
 			statusCode := ctx.Writer.Status()
 			if r := recover(); r != nil {
-				log.Logrus().WithField("error", r).Errorln("catch exception")
+				log.Logrus().WithField("error", r).Error(r)
 				if http.StatusOK == statusCode {
 					ctx.AbortWithStatusJSON(http.StatusOK, ResponseException())
 					return

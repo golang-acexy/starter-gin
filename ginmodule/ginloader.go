@@ -25,10 +25,10 @@ type GinModule struct {
 	ListenAddress string // ip:port
 
 	// gin config
-	DebugModule            bool
-	MaxMultipartMemory     int64
-	HandleMethodNotAllowed bool
-	ForwardedByClientIP    bool
+	DebugModule                  bool
+	MaxMultipartMemory           int64
+	DisableMethodNotAllowedError bool
+	ForwardedByClientIP          bool
 }
 
 func (g *GinModule) ModuleConfig() *declaration.ModuleConfig {
@@ -69,7 +69,10 @@ func (g *GinModule) Register(interceptor *func(instance interface{})) error {
 	}
 
 	ginEngin.ForwardedByClientIP = g.ForwardedByClientIP
-	ginEngin.HandleMethodNotAllowed = g.HandleMethodNotAllowed
+	if !g.DisableMethodNotAllowedError {
+		ginEngin.HandleMethodNotAllowed = true
+
+	}
 
 	ginEngin.Use(BasicRecover())
 
