@@ -2,10 +2,12 @@ package test
 
 import (
 	"fmt"
+	"github.com/acexy/golang-toolkit/log"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-acexy/starter-gin/ginmodule"
 	"github.com/golang-acexy/starter-gin/test/router"
 	"github.com/golang-acexy/starter-parent/parentmodule/declaration"
+	"github.com/sirupsen/logrus"
 	"net/http"
 	"testing"
 	"time"
@@ -14,6 +16,8 @@ import (
 var moduleLoaders []declaration.ModuleLoader
 
 func init() {
+	config := log.LogrusConfig{}
+	config.EnableConsole(logrus.TraceLevel, false)
 
 	interceptor := func(instance interface{}) {
 		engine := instance.(*gin.Engine)
@@ -34,7 +38,6 @@ func init() {
 		GinInterceptor: &interceptor,
 	}}
 
-	fmt.Println(moduleLoaders)
 }
 
 func TestGin(t *testing.T) {
@@ -52,7 +55,7 @@ func TestGin(t *testing.T) {
 	select {}
 }
 
-func TestGinUnload(t *testing.T) {
+func TestGinLoadAndUnload(t *testing.T) {
 
 	module := declaration.Module{
 		ModuleLoaders: moduleLoaders,
