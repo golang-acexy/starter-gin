@@ -38,13 +38,18 @@ func ResponseException() *Response {
 }
 
 // ResponseError 其他StatusCode错误
-func ResponseError(statusCode StatusCode) *Response {
-	return &Response{
+func ResponseError(statusCode StatusCode, statusMessage ...StatusMessage) *Response {
+	response := &Response{
 		Status: &Status{
-			StatusCode:    statusCode,
-			StatusMessage: GetStatusMessage(statusCode),
+			StatusCode: statusCode,
 		},
 	}
+	if len(statusMessage) > 0 {
+		response.Status.StatusMessage = statusMessage[0]
+	} else {
+		response.Status.StatusMessage = GetStatusMessage(statusCode)
+	}
+	return response
 }
 
 func ResponseBizError(bizErrorCode *BizErrorCode, bizErrorMessage *BizErrorMessage) *Response {
