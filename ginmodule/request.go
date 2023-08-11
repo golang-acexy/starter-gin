@@ -98,6 +98,11 @@ func (r *Request) BindUriQueryParams(object any) {
 	}
 }
 
+// ShouldBindUriQueryParams 绑定结构体用于接收UriQuery参数
+func (r *Request) ShouldBindUriQueryParams(object any) {
+	_ = r.ctx.ShouldBindQuery(object)
+}
+
 // BindBodyJson 将请求body数据绑定到json结构体中
 // 任何异常将触发panic响应请求参数错误 `json:""`
 func (r *Request) BindBodyJson(object any) {
@@ -108,6 +113,11 @@ func (r *Request) BindBodyJson(object any) {
 	}
 }
 
+// ShouldBindBodyJson 将请求body数据绑定到json结构体中
+func (r *Request) ShouldBindBodyJson(object any) {
+	_ = r.ctx.ShouldBindJSON(object)
+}
+
 // BindBodyForm 将请求body表单数据绑定到from结构体中
 // 任何异常将触发panic响应请求参数错误 `form:""`
 func (r *Request) BindBodyForm(object any) {
@@ -116,6 +126,11 @@ func (r *Request) BindBodyForm(object any) {
 		r.ctx.Status(http.StatusBadRequest)
 		panic(err)
 	}
+}
+
+// ShouldBindBodyForm 将请求body表单数据绑定到from结构体中
+func (r *Request) ShouldBindBodyForm(object any) {
+	_ = r.ctx.ShouldBindWith(object, binding.FormPost)
 }
 
 // RawData 将请求body以字节数据返回
