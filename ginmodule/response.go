@@ -20,7 +20,7 @@ func ResponseSuccess(data ...any) *Response {
 		Status: &Status{
 			StatusCode:    StatusCodeSuccess,
 			StatusMessage: statusMessageSuccess,
-			Timestamp:     time.Now().UnixMicro(),
+			Timestamp:     time.Now().UnixMilli() / 1000,
 		},
 	}
 	if len(data) > 0 {
@@ -35,7 +35,7 @@ func ResponseException() *Response {
 		Status: &Status{
 			StatusCode:    StatusCodeException,
 			StatusMessage: statusMessageException,
-			Timestamp:     time.Now().UnixMicro(),
+			Timestamp:     time.Now().UnixMilli() / 1000,
 		},
 	}
 }
@@ -45,7 +45,7 @@ func ResponseError(statusCode StatusCode, statusMessage ...StatusMessage) *Respo
 	response := &Response{
 		Status: &Status{
 			StatusCode: statusCode,
-			Timestamp:  time.Now().UnixMicro(),
+			Timestamp:  time.Now().UnixMilli() / 1000,
 		},
 	}
 	if len(statusMessage) > 0 {
@@ -63,7 +63,7 @@ func ResponseBizError(bizErrorCode *BizErrorCode, bizErrorMessage *BizErrorMessa
 			StatusMessage:   GetStatusMessage(StatusCodeSuccess),
 			BizErrorCode:    bizErrorCode,
 			BizErrorMessage: bizErrorMessage,
-			Timestamp:       time.Now().UnixMicro(),
+			Timestamp:       time.Now().UnixMilli() / 1000,
 		},
 	}
 }
