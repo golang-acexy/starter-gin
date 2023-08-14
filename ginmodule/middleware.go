@@ -18,17 +18,11 @@ func init() {
 	httpCodeWithStatus[http.StatusRequestEntityTooLarge] = StatusCodeUploadLimitExceeded
 }
 
-func BasicRecover() gin.HandlerFunc {
+func ErrorCodeHandler() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		defer func() {
+		ctx.Next()
+		if !ctx.IsAborted() {
 			statusCode := ctx.Writer.Status()
-			if r := recover(); r != nil {
-				log.Logrus().WithField("error", r).Error(r)
-				if http.StatusOK == statusCode {
-					ctx.AbortWithStatusJSON(http.StatusOK, ResponseException())
-					return
-				}
-			}
 			if statusCode != http.StatusOK {
 				log.Logrus().Warnln("not success response statusCode =", statusCode)
 				v, ok := httpCodeWithStatus[statusCode]
@@ -37,6 +31,16 @@ func BasicRecover() gin.HandlerFunc {
 				} else {
 					ctx.AbortWithStatusJSON(http.StatusOK, ResponseError(v))
 				}
+			}
+		}
+	}
+}
+
+func Recover() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		defer func() {
+			if r := recover(); r != nil {
+				log.Logrus().WithField("error", r).Error(r)
 			}
 		}()
 		ctx.Next()

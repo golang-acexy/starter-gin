@@ -25,11 +25,13 @@ func init() {
 	}
 
 	moduleLoaders = []declaration.ModuleLoader{&ginmodule.GinModule{
-		ListenAddress: ":8118",
-		DebugModule:   true,
+		ListenAddress:       ":8080",
+		DebugModule:         true,
+		UseErrorCodeHandler: true,
 		Routers: []ginmodule.Router{
 			&router.DemoRouter{},
 			&router.ParamRouter{},
+			&router.AbortRouter{},
 		},
 		GinInterceptor: &interceptor,
 	}}
@@ -37,7 +39,6 @@ func init() {
 }
 
 func TestGin(t *testing.T) {
-
 	module := declaration.Module{
 		ModuleLoaders: moduleLoaders,
 	}

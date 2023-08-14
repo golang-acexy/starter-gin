@@ -20,9 +20,10 @@ type GinModule struct {
 	// * 注册业务路由
 	Routers []Router
 
-	GlobalTimeout time.Duration
 	// * 注册服务监听地址 :8080 (默认)
 	ListenAddress string // ip:port
+
+	UseErrorCodeHandler bool // 使用错误包装处理器
 
 	// gin config
 	DebugModule                  bool
@@ -71,16 +72,16 @@ func (g *GinModule) Register(interceptor *func(instance interface{})) error {
 	ginEngin.ForwardedByClientIP = g.ForwardedByClientIP
 	if !g.DisableMethodNotAllowedError {
 		ginEngin.HandleMethodNotAllowed = true
-
 	}
 
-	ginEngin.Use(BasicRecover())
+	if g.UseErrorCodeHandler {
+		ginEngin.Use(ErrorCodeHandler())
+	}
+
+	ginEngin.Use(Recover())
 
 	if len(g.Routers) > 0 {
 		loadRouter(ginEngin, g.Routers)
-	}
-
-	if g.GlobalTimeout == 0 {
 	}
 
 	if g.ListenAddress == "" {
