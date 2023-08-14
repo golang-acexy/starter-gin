@@ -23,7 +23,7 @@ type GinModule struct {
 	// * 注册服务监听地址 :8080 (默认)
 	ListenAddress string // ip:port
 
-	UseErrorCodeHandler bool // 使用错误包装处理器
+	UseErrorCodeHandler bool // 使用错误包装处理器 在出现非200响应码或者异常时，将自动进行转化
 
 	// gin config
 	DebugModule                  bool
