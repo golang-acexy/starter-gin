@@ -12,7 +12,8 @@ type GinWrapper struct {
 type HandlerWrapper func(request *Request) (*Response, error)
 
 type RouterInfo struct {
-	GroupPath string
+	GroupPath        string
+	BasicAuthAccount map[string]string // 如果指定基于BasicAuth认证的账户，则该GroupPath下资源将需要权限认证
 }
 
 type Router interface {
@@ -20,9 +21,14 @@ type Router interface {
 	RegisterHandler(ginWrapper *GinWrapper)
 }
 
-func loadRouter(gin *gin.Engine, routers []Router) {
+func loadRouter(g *gin.Engine, routers []Router) {
 	for _, v := range routers {
-		v.RegisterHandler(&GinWrapper{routerGroup: gin.Group(v.RouterInfo().GroupPath)})
+		routerInfo := v.RouterInfo()
+		if len(routerInfo.BasicAuthAccount) > 0 {
+			v.RegisterHandler(&GinWrapper{routerGroup: g.Group(routerInfo.GroupPath, gin.BasicAuth(routerInfo.BasicAuthAccount))})
+		} else {
+			v.RegisterHandler(&GinWrapper{routerGroup: g.Group(routerInfo.GroupPath)})
+		}
 	}
 }
 

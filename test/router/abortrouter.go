@@ -14,13 +14,10 @@ func (a *AbortRouter) RouterInfo() *ginmodule.RouterInfo {
 }
 
 func (a *AbortRouter) RegisterHandler(ginWrapper *ginmodule.GinWrapper) {
-
-	// path /abort/exception 主动返回的异常触发系统错误
-	ginWrapper.GET("code", a.code())
-
+	ginWrapper.GET("invoke", a.invoke())
 }
 
-func (a *AbortRouter) code() func(request *ginmodule.Request) (*ginmodule.Response, error) {
+func (a *AbortRouter) invoke() func(request *ginmodule.Request) (*ginmodule.Response, error) {
 	return func(request *ginmodule.Request) (*ginmodule.Response, error) {
 		gCtx := request.RawGinContext()
 		gCtx.AbortWithStatus(401)

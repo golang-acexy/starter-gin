@@ -32,6 +32,7 @@ func init() {
 			&router.DemoRouter{},
 			&router.ParamRouter{},
 			&router.AbortRouter{},
+			&router.BasicAuthRouter{},
 		},
 		GinInterceptor: &interceptor,
 	}}
