@@ -3,13 +3,13 @@ module github.com/golang-acexy/starter-gin
 go 1.18
 
 require (
-	github.com/acexy/golang-toolkit v0.0.0-20230807093347-1c0dab6aed7a
+	github.com/acexy/golang-toolkit v0.0.0-20230811064636-d85e20f3df90
 	github.com/gin-gonic/gin v1.9.1
-	github.com/golang-acexy/starter-parent v0.0.0-20230807103042-9893e7ce457d
+	github.com/golang-acexy/starter-parent v0.0.0-20230816071010-f699425d3284
 )
 
 require (
-	github.com/bytedance/sonic v1.10.0-rc3 // indirect
+	github.com/bytedance/sonic v1.10.0 // indirect
 	github.com/chenzhuoyu/base64x v0.0.0-20230717121745-296ad89f973d // indirect
 	github.com/chenzhuoyu/iasm v0.9.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.2 // indirect

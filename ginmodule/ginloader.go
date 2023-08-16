@@ -96,7 +96,6 @@ func (g *GinModule) Register(interceptor *func(instance interface{})) error {
 	go func() {
 		log.Logrus().Traceln("gin will listen at ", g.ListenAddress)
 		if err = server.ListenAndServe(); err != nil {
-			log.Logrus().WithError(err).Traceln("gin stopped")
 		}
 	}()
 
