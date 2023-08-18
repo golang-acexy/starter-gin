@@ -11,6 +11,10 @@ import (
 
 var server *http.Server
 
+const (
+	defaultListenAddress = ":8080"
+)
+
 type GinModule struct {
 
 	// 自定义Module配置
@@ -85,7 +89,7 @@ func (g *GinModule) Register(interceptor *func(instance interface{})) error {
 	}
 
 	if g.ListenAddress == "" {
-		g.ListenAddress = ":8080"
+		g.ListenAddress = defaultListenAddress
 	}
 
 	server = &http.Server{
