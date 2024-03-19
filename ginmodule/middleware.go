@@ -1,7 +1,7 @@
 package ginmodule
 
 import (
-	"github.com/acexy/golang-toolkit/log"
+	"github.com/acexy/golang-toolkit/logger"
 	"github.com/gin-gonic/gin"
 	"net/http"
 )
@@ -24,7 +24,7 @@ func ErrorCodeHandler() gin.HandlerFunc {
 		if !ctx.IsAborted() {
 			statusCode := ctx.Writer.Status()
 			if statusCode != http.StatusOK {
-				log.Logrus().Warnln("not success response statusCode =", statusCode)
+				logger.Logrus().Warnln("not success response statusCode =", statusCode)
 				v, ok := httpCodeWithStatus[statusCode]
 				if !ok {
 					ctx.AbortWithStatusJSON(http.StatusOK, ResponseException())
@@ -40,7 +40,7 @@ func Recover() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		defer func() {
 			if r := recover(); r != nil {
-				log.Logrus().WithField("error", r).Error(r)
+				logger.Logrus().WithField("error", r).Error(r)
 			}
 		}()
 		ctx.Next()
