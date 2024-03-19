@@ -2,7 +2,7 @@ package ginmodule
 
 import (
 	"context"
-	"github.com/acexy/golang-toolkit/log"
+	"github.com/acexy/golang-toolkit/logger"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-acexy/starter-parent/parentmodule/declaration"
 	"net/http"
@@ -98,7 +98,7 @@ func (g *GinModule) Register(interceptor *func(instance interface{})) error {
 	}
 
 	go func() {
-		log.Logrus().Traceln(g.ModuleConfig().ModuleName, "started")
+		logger.Logrus().Traceln(g.ModuleConfig().ModuleName, "started")
 		if err = server.ListenAndServe(); err != nil {
 		}
 	}()
