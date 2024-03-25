@@ -21,8 +21,6 @@ type GinModule struct {
 	GinModuleConfig *declaration.ModuleConfig
 	GinInterceptor  func(instance interface{})
 
-	ginEngine *gin.Engine
-
 	// * 注册业务路由
 	Routers []Router
 
@@ -51,14 +49,9 @@ func (g *GinModule) ModuleConfig() *declaration.ModuleConfig {
 	}
 }
 
-func (g *GinModule) RawInstance() interface{} {
-	g.ginEngine = gin.New()
-	return g.ginEngine
-}
-
-func (g *GinModule) Register() error {
+func (g *GinModule) Register() (interface{}, error) {
 	var err error
-	ginEngin := g.ginEngine
+	ginEngin := gin.New()
 	if g.DebugModule {
 		gin.SetMode(gin.DebugMode)
 	} else {
@@ -99,7 +92,7 @@ func (g *GinModule) Register() error {
 		}
 	}()
 
-	return err
+	return ginEngin, err
 }
 
 func (g *GinModule) Unregister(maxWaitSeconds uint) (gracefully bool, err error) {
