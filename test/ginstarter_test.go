@@ -14,11 +14,9 @@ import (
 var moduleLoaders []declaration.ModuleLoader
 
 func init() {
-
-	interceptor := func(instance interface{}) {
-		engine := instance.(*gin.Engine)
+	interceptor := func(instance *gin.Engine) {
 		// 使用interceptor的形式，获取原始gin实例 注册一个伪探活服务
-		engine.GET("/ping", func(context *gin.Context) {
+		instance.GET("/ping", func(context *gin.Context) {
 			context.String(http.StatusOK, "alive")
 		})
 	}

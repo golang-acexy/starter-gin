@@ -19,7 +19,7 @@ type GinModule struct {
 
 	// 自定义Module配置
 	GinModuleConfig *declaration.ModuleConfig
-	GinInterceptor  func(instance interface{})
+	GinInterceptor  func(instance *gin.Engine)
 
 	// * 注册业务路由
 	Routers []Router
@@ -45,12 +45,17 @@ func (g *GinModule) ModuleConfig() *declaration.ModuleConfig {
 		UnregisterPriority:       0,
 		UnregisterAllowAsync:     true,
 		UnregisterMaxWaitSeconds: 30,
-		LoadInterceptor:          g.GinInterceptor,
+		LoadInterceptor: func(instance interface{}) {
+			if g.GinInterceptor != nil {
+				g.GinInterceptor(instance.(*gin.Engine))
+			}
+		},
 	}
 }
 
 func (g *GinModule) Register() (interface{}, error) {
 	var err error
+
 	ginEngin := gin.New()
 	if g.DebugModule {
 		gin.SetMode(gin.DebugMode)
