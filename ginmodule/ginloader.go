@@ -54,14 +54,15 @@ func (g *GinModule) ModuleConfig() *declaration.ModuleConfig {
 }
 
 func (g *GinModule) Register() (interface{}, error) {
-	var err error
 
-	ginEngin := gin.New()
+	var err error
 	if g.DebugModule {
 		gin.SetMode(gin.DebugMode)
 	} else {
 		gin.SetMode(gin.ReleaseMode)
 	}
+
+	ginEngin := gin.New()
 
 	if g.MaxMultipartMemory > 0 {
 		ginEngin.MaxMultipartMemory = g.MaxMultipartMemory
