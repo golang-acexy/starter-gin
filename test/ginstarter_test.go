@@ -23,7 +23,7 @@ func init() {
 
 	moduleLoaders = []declaration.ModuleLoader{&ginmodule.GinModule{
 		ListenAddress:       ":8080",
-		DebugModule:         false,
+		DebugModule:         true,
 		UseErrorCodeHandler: true,
 		Routers: []ginmodule.Router{
 			&router.DemoRouter{},

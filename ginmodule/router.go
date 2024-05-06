@@ -42,7 +42,11 @@ func (g *GinWrapper) handler(methods []string, path string, handlerWrapper ...Ha
 				panic(err)
 			}
 			if !context.IsAborted() {
-				context.JSON(http.StatusOK, response)
+				if response == nil {
+					context.JSON(http.StatusOK, ResponseSuccess())
+				} else {
+					context.JSON(http.StatusOK, response)
+				}
 			}
 		}
 	}
