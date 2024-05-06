@@ -16,6 +16,7 @@ func init() {
 	httpCodeWithStatus[http.StatusMethodNotAllowed] = StatusCodeMethodNotAllowed
 	httpCodeWithStatus[http.StatusUnsupportedMediaType] = StatusCodeMediaTypeNotAllowed
 	httpCodeWithStatus[http.StatusRequestEntityTooLarge] = StatusCodeUploadLimitExceeded
+	httpCodeWithStatus[http.StatusUnauthorized] = StatusCodeForbidden
 }
 
 func ErrorCodeHandler() gin.HandlerFunc {

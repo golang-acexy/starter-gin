@@ -27,6 +27,8 @@ func (d *DemoRouter) RegisterHandler(ginWrapper *ginmodule.GinWrapper) {
 
 	// path /demo/hold 5s的请求hold
 	ginWrapper.GET("hold", d.hold())
+
+	ginWrapper.GET("empty", d.empty())
 }
 
 func (d *DemoRouter) error() func(request *ginmodule.Request) (*ginmodule.Response, error) {
@@ -48,5 +50,11 @@ func (d *DemoRouter) hold() func(request *ginmodule.Request) (*ginmodule.Respons
 		fmt.Println("invoke")
 		time.Sleep(time.Second * 5)
 		return ginmodule.ResponseSuccess(), nil
+	}
+}
+
+func (d *DemoRouter) empty() func(request *ginmodule.Request) (*ginmodule.Response, error) {
+	return func(request *ginmodule.Request) (*ginmodule.Response, error) {
+		return nil, nil
 	}
 }
