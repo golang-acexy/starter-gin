@@ -6,6 +6,7 @@ type BizErrorCode int
 type BizErrorMessage string
 
 const (
+	// StatusCodeSuccess 请求成功
 	StatusCodeSuccess            = 200
 	StatusCodeServiceUnavailable = 10000 - iota
 	StatusCodeExceededLimit
