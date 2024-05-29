@@ -5,6 +5,7 @@ import (
 	"github.com/acexy/golang-toolkit/logger"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-acexy/starter-parent/parentmodule/declaration"
+	"github.com/sirupsen/logrus"
 	"net/http"
 	"time"
 )
@@ -61,6 +62,9 @@ func (g *GinModule) Register() (interface{}, error) {
 	} else {
 		gin.SetMode(gin.ReleaseMode)
 	}
+
+	gin.DefaultWriter = &logrusLogger{log: logger.Logrus(), level: logrus.DebugLevel}
+	gin.DefaultErrorWriter = &logrusLogger{log: logger.Logrus(), level: logrus.ErrorLevel}
 
 	ginEngin := gin.New()
 
