@@ -13,7 +13,7 @@ type HandlerWrapper func(request *Request) (*Response, error)
 
 type RouterInfo struct {
 	GroupPath string
-	// 如果指定基于BasicAuth认证的账户，则该GroupPath下资源将需要权限认证 如果不满足验证规则，则会返回相应的httpStatus错误码，并且不会被本框架包装
+	// 如果指定基于BasicAuth认证的账户，则该GroupPath下资源将需要权限认证
 	BasicAuthAccount map[string]string
 }
 

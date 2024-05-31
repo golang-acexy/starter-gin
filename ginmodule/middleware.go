@@ -22,17 +22,17 @@ func init() {
 func ErrorCodeHandler() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		ctx.Next()
-		if !ctx.IsAborted() {
-			statusCode := ctx.Writer.Status()
-			if statusCode != http.StatusOK {
-				logger.Logrus().Warnln("not success response statusCode =", statusCode)
-				v, ok := httpCodeWithStatus[statusCode]
-				if !ok {
-					ctx.AbortWithStatusJSON(http.StatusOK, ResponseException())
-				} else {
-					ctx.AbortWithStatusJSON(http.StatusOK, ResponseError(v))
-				}
+		statusCode := ctx.Writer.Status()
+		if statusCode != http.StatusOK {
+			ctx.Status(200)
+			logger.Logrus().Warnln("not success response statusCode =", statusCode)
+			v, ok := httpCodeWithStatus[statusCode]
+			if !ok {
+				ctx.AbortWithStatusJSON(http.StatusOK, ResponseException())
+			} else {
+				ctx.AbortWithStatusJSON(http.StatusOK, ResponseError(v))
 			}
+			ctx.Abort()
 		}
 	}
 }
