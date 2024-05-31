@@ -65,7 +65,6 @@ func (g *GinModule) Register() (interface{}, error) {
 
 	gin.DefaultWriter = &logrusLogger{log: logger.Logrus(), level: logrus.DebugLevel}
 	gin.DefaultErrorWriter = &logrusLogger{log: logger.Logrus(), level: logrus.ErrorLevel}
-
 	ginEngin := gin.New()
 
 	if g.MaxMultipartMemory > 0 {
