@@ -25,7 +25,7 @@ func ErrorCodeHandler() gin.HandlerFunc {
 		statusCode := ctx.Writer.Status()
 		if statusCode != http.StatusOK {
 			ctx.Status(200)
-			logger.Logrus().Warnln("not success response statusCode =", statusCode)
+			logger.Logrus().Warnln("not success response uri =", ctx.Request.RequestURI, "statusCode =", statusCode)
 			v, ok := httpCodeWithStatus[statusCode]
 			if !ok {
 				ctx.AbortWithStatusJSON(http.StatusOK, ResponseException())
