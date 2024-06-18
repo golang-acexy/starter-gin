@@ -2,6 +2,7 @@ package test
 
 import (
 	"fmt"
+	"github.com/acexy/golang-toolkit/sys"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-acexy/starter-gin/ginmodule"
 	"github.com/golang-acexy/starter-gin/test/router"
@@ -22,9 +23,9 @@ func init() {
 	}
 
 	moduleLoaders = []declaration.ModuleLoader{&ginmodule.GinModule{
-		ListenAddress:       ":8080",
-		DebugModule:         false,
-		UseErrorCodeHandler: true,
+		ListenAddress:                ":8080",
+		DebugModule:                  true,
+		DisableHttpStatusCodeHandler: true,
 		Routers: []ginmodule.Router{
 			&router.DemoRouter{},
 			&router.ParamRouter{},
@@ -36,7 +37,7 @@ func init() {
 
 }
 
-func TestGin(t *testing.T) {
+func TestGinDefault(t *testing.T) {
 	module := declaration.Module{
 		ModuleLoaders: moduleLoaders,
 	}
@@ -47,11 +48,39 @@ func TestGin(t *testing.T) {
 		return
 	}
 
-	select {}
+	sys.ShutdownHolding()
+}
+
+// 自定义Gin的表现
+func TestGinUser(t *testing.T) {
+
+	ginConfig := []declaration.ModuleLoader{&ginmodule.GinModule{
+		ListenAddress:                ":8080",
+		DebugModule:                  true,
+		DisableHttpStatusCodeHandler: true,
+		Routers: []ginmodule.Router{
+			&router.DemoRouter{},
+			&router.ParamRouter{},
+			&router.AbortRouter{},
+			&router.BasicAuthRouter{},
+			&router.MyRestRouter{},
+		},
+	}}
+
+	module := declaration.Module{
+		ModuleLoaders: ginConfig,
+	}
+
+	err := module.Load()
+	if err != nil {
+		fmt.Printf("%+v\n", err)
+		return
+	}
+
+	sys.ShutdownHolding()
 }
 
 func TestGinLoadAndUnload(t *testing.T) {
-
 	module := declaration.Module{
 		ModuleLoaders: moduleLoaders,
 	}
