@@ -101,39 +101,47 @@ func (r *RouterWrapper) handler(methods []string, path string, handlerWrapper ..
 
 func httpResponse(context *gin.Context, response Response) {
 
-	if instance, ok := response.(ginRawResp); ok {
-		instance.ginFn(context)
-		return
-	}
-
-	httpStatusCode := response.HttpStatusCode()
-	if httpStatusCode == 0 {
-		httpStatusCode = http.StatusOK
-	}
-
-	if len(response.Headers()) != 0 {
-		for k, v := range response.Headers() {
-			context.Header(k, v)
+	// 如果是普通响应 判断是否使用了gin原始响应功能
+	if instance, ok := response.(commonResp); ok {
+		if instance.ginFn != nil {
+			instance.ginFn(context)
+			return
 		}
 	}
 
-	contentType := response.ContentType()
+	responseData := response.Data()
+	if responseData == nil {
+		return
+	}
+
+	contentType := responseData.contentType
 	if contentType == "" {
 		contentType = gin.MIMEJSON
 		logger.Logrus().Traceln("ContentType is not set, use default", gin.MIMEJSON)
 	}
 
-	data := response.Data()
-	if v, ok := data.(string); ok {
-		context.Data(httpStatusCode, contentType, []byte(v))
-	} else if v, ok := data.([]byte); ok {
-		context.Data(httpStatusCode, contentType, v)
-	} else {
-		decode, err := defaultResponseDataDecoder.Decode(data)
-		if err != nil {
-			panic(err)
+	httpStatusCode := responseData.statusCode
+	if httpStatusCode == 0 {
+		httpStatusCode = http.StatusOK
+	}
+
+	cookies := responseData.cookies
+	if len(cookies) > 0 {
+		for _, v := range cookies {
+			context.SetCookie(v.name, v.value, v.maxAge, v.path, v.domain, v.secure, v.httpOnly)
 		}
-		context.Data(httpStatusCode, contentType, decode)
+	}
+
+	headers := responseData.headers
+	if len(headers) > 0 {
+		for _, v := range headers {
+			context.Header(v.name, v.value)
+		}
+	}
+
+	data := responseData.data
+	if len(data) > 0 {
+		context.Data(httpStatusCode, contentType, data)
 	}
 }
 
@@ -156,4 +164,103 @@ func (r *responseStatusRewriter) Write(data []byte) (int, error) {
 
 func (r *responseStatusRewriter) Status() int {
 	return r.statusCode
+}
+
+func (r *responseStatusRewriter) WriteStatusNow() {
+	r.ResponseWriter.WriteHeader(r.statusCode)
+}
+
+// ResponseData 标准响应数据内容
+type ResponseData struct {
+	// body响应体负载数据
+	data []byte
+	// ContentType 响应的ContentType
+	contentType string
+	// 响应状态码
+	statusCode int
+	// 响应头
+	headers []*ResponseHeader
+	// 响应Cookie
+	cookies []*ResponseCookie
+}
+
+// ResponseHeader 响应头
+type ResponseHeader struct {
+	name string
+	// 设置零值可以清除该Name响应头
+	value string
+}
+
+// ResponseCookie 响应Cookie
+type ResponseCookie struct {
+	name     string
+	value    string
+	maxAge   int
+	path     string
+	domain   string
+	secure   bool
+	httpOnly bool
+}
+
+func NewResponseData() *ResponseData {
+	return &ResponseData{}
+}
+
+func NewHeader(name, value string) *ResponseHeader {
+	return &ResponseHeader{name: name, value: value}
+}
+
+func NewCookie(name, value string, maxAge int, path, domain string, secure, httpOnly bool) *ResponseCookie {
+	return &ResponseCookie{name: name, value: value, maxAge: maxAge, path: path, domain: domain, secure: secure, httpOnly: httpOnly}
+}
+
+func (r *ResponseData) SetData(data []byte) *ResponseData {
+	r.data = data
+	return r
+}
+
+func (r *ResponseData) SetContentType(contentType string) *ResponseData {
+	r.contentType = contentType
+	return r
+}
+
+func (r *ResponseData) SetStatusCode(statusCode int) *ResponseData {
+	r.statusCode = statusCode
+	return r
+}
+
+func (r *ResponseData) AddHeaders(headers []*ResponseHeader) *ResponseData {
+	if len(r.headers) != 0 {
+		r.headers = append(r.headers, headers...)
+	} else {
+		r.headers = headers
+	}
+	return r
+}
+
+func (r *ResponseData) AddHeader(header *ResponseHeader) *ResponseData {
+	if len(r.headers) == 0 {
+		r.headers = []*ResponseHeader{header}
+	} else {
+		r.headers = append(r.headers, header)
+	}
+	return r
+}
+
+func (r *ResponseData) AddCookies(cookies []*ResponseCookie) *ResponseData {
+	if len(r.cookies) != 0 {
+		r.cookies = append(r.cookies, cookies...)
+	} else {
+		r.cookies = cookies
+	}
+	return r
+}
+
+func (r *ResponseData) AddCookie(cookie *ResponseCookie) *ResponseData {
+	if len(r.cookies) == 0 {
+		r.cookies = []*ResponseCookie{cookie}
+	} else {
+		r.cookies = append(r.cookies, cookie)
+	}
+	return r
 }

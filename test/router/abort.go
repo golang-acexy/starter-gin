@@ -19,8 +19,6 @@ func (a *AbortRouter) Handlers(router *ginmodule.RouterWrapper) {
 
 func (a *AbortRouter) invoke() ginmodule.HandlerWrapper {
 	return func(request *ginmodule.Request) (ginmodule.Response, error) {
-		gCtx := request.RawGinContext()
-		gCtx.AbortWithStatus(401)
-		return nil, nil
+		return ginmodule.RespAbortWithStatus(401), nil
 	}
 }

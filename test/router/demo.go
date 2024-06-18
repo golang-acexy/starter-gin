@@ -19,8 +19,7 @@ func (d *DemoRouter) Info() *ginmodule.RouterInfo {
 
 func (d *DemoRouter) Handlers(router *ginmodule.RouterWrapper) {
 
-	// path /demo/error 未捕获的异常触发系统错误
-	router.MATCH([]string{http.MethodGet, http.MethodPost}, "error", d.error())
+	router.MATCH([]string{http.MethodGet, http.MethodPost}, "more", d.more())
 
 	// path /demo/exception 主动返回的异常触发系统错误
 	router.GET("exception", d.exception())
@@ -31,11 +30,13 @@ func (d *DemoRouter) Handlers(router *ginmodule.RouterWrapper) {
 	router.GET("empty", d.empty())
 }
 
-func (d *DemoRouter) error() ginmodule.HandlerWrapper {
+func (d *DemoRouter) more() ginmodule.HandlerWrapper {
 	return func(request *ginmodule.Request) (ginmodule.Response, error) {
 		fmt.Println("invoke")
-		panic("error")
-		return ginmodule.RespRestSuccess(), nil
+		// 通过Builder来响应自定义Rest数据 并设置其他http属性
+		return ginmodule.NewRespRest().DataBuilder(func(data *ginmodule.ResponseData) {
+			data.SetStatusCode(http.StatusAccepted).SetData([]byte("success")).AddHeader(ginmodule.NewHeader("test", "test"))
+		}), nil
 	}
 }
 
