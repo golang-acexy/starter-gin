@@ -64,7 +64,7 @@ func RewriteHttpStatusCodeHandler() gin.HandlerFunc {
 		}
 		ctx.Writer = writer
 		ctx.Next()
-		if writer.statusCode == 0 {
+		if writer.statusCode == 0 { // 未设置自定义状态码
 			writer.statusCode = writer.ResponseWriter.Status()
 		}
 		writer.ResponseWriter.WriteHeader(writer.statusCode)
@@ -77,6 +77,8 @@ func HttpStatusCodeHandler() gin.HandlerFunc {
 		ctx.Next()
 		writer := ctx.Writer
 		var statusCode int
+
+		// 如果使用了可覆写状态码中间件
 		if v, ok := writer.(*responseStatusRewriter); ok {
 			if v.statusCode != 0 {
 				statusCode = v.statusCode
