@@ -36,6 +36,7 @@ func init() {
 
 }
 
+// 默认Gin表现行为
 func TestGinDefault(t *testing.T) {
 	module := declaration.Module{
 		ModuleLoaders: moduleLoaders,
@@ -51,7 +52,8 @@ func TestGinDefault(t *testing.T) {
 }
 
 // 自定义Gin的表现
-func TestGinUser(t *testing.T) {
+// 将在和默认行为相同的路由功能代码下表现不同的响应
+func TestGinCustomer(t *testing.T) {
 
 	ginConfig := []declaration.ModuleLoader{&ginmodule.GinModule{
 		ListenAddress:                ":8080",

@@ -162,6 +162,12 @@ func (r *responseStatusRewriter) Write(data []byte) (int, error) {
 	return r.ResponseWriter.Write(data)
 }
 
+func (r *responseStatusRewriter) WriteHeaderNow() {
+	if !r.Written() {
+		r.ResponseWriter.WriteHeader(r.statusCode)
+	}
+}
+
 func (r *responseStatusRewriter) Status() int {
 	return r.statusCode
 }

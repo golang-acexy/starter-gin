@@ -1,0 +1,12 @@
+###
+GET http://localhost:8080/auth/invoke
+
+###
+GET http://localhost:8080/auth/invoke
+Authorization: Basic YWNleHk6YWNleHk="
+
+###
+GET localhost:8080/auth/invoke1
+
+###
+GET localhost:8080/demo/more

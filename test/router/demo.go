@@ -22,7 +22,8 @@ func (d *DemoRouter) Handlers(router *ginmodule.RouterWrapper) {
 	router.MATCH([]string{http.MethodGet, http.MethodPost}, "more", d.more())
 
 	// path /demo/exception 主动返回的异常触发系统错误
-	router.GET("exception", d.exception())
+	router.GET("error1", d.error1())
+	router.GET("error2", d.error2())
 
 	// path /demo/hold 5s的请求hold
 	router.GET("hold", d.hold())
@@ -40,9 +41,17 @@ func (d *DemoRouter) more() ginmodule.HandlerWrapper {
 	}
 }
 
-func (d *DemoRouter) exception() ginmodule.HandlerWrapper {
+func (d *DemoRouter) error1() ginmodule.HandlerWrapper {
 	return func(request *ginmodule.Request) (ginmodule.Response, error) {
-		return ginmodule.RespRestSuccess(), errors.New("my exception")
+		// 通过error响应异常请求
+		return nil, errors.New("return error")
+	}
+}
+
+func (d *DemoRouter) error2() ginmodule.HandlerWrapper {
+	return func(request *ginmodule.Request) (ginmodule.Response, error) {
+		// 通过未处理的崩溃触发异常
+		panic("panic exception")
 	}
 }
 

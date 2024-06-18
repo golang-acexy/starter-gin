@@ -10,7 +10,7 @@ var (
 
 	// 默认处理状态码handler的响应执行器
 	defaultHttpStatusCodeHandlerResponse HttpStatusCodeCodeHandlerResponse = func(ctx *gin.Context, httpStatusCode int) Response {
-		logger.Logrus().Warningln("Bad request response path =", ctx.Request.URL, "http status code =", httpStatusCode)
+		logger.Logrus().Warningln("Bad request response path =", ctx.Request.URL, "test.http status code =", httpStatusCode)
 		v, ok := httpCodeWithStatus[httpStatusCode]
 		if !ok {
 			return RespRestStatusError(StatusCodeException)
@@ -77,10 +77,9 @@ func HttpStatusCodeHandler() gin.HandlerFunc {
 		ctx.Next()
 		writer := ctx.Writer
 		var statusCode int
-
 		// 如果使用了可覆写状态码中间件
 		if v, ok := writer.(*responseStatusRewriter); ok {
-			if v.statusCode != 0 {
+			if v.statusCode != 0 && v.statusCode != http.StatusOK {
 				statusCode = v.statusCode
 			} else {
 				statusCode = v.ResponseWriter.Status()
@@ -89,7 +88,6 @@ func HttpStatusCodeHandler() gin.HandlerFunc {
 			statusCode = ctx.Writer.Status()
 		}
 		if statusCode != http.StatusOK {
-			ctx.Writer.WriteHeader(http.StatusOK)
 			response := defaultHttpStatusCodeHandlerResponse(ctx, statusCode)
 			httpResponse(ctx, response)
 		}
