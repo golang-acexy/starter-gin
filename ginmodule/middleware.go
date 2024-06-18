@@ -10,7 +10,7 @@ var (
 
 	// 默认处理状态码handler的响应执行器
 	defaultHttpStatusCodeHandlerResponse HttpStatusCodeCodeHandlerResponse = func(ctx *gin.Context, httpStatusCode int) Response {
-		logger.Logrus().Warning("Request bad response path = ", ctx.Request.URL, "http status code = ", httpStatusCode)
+		logger.Logrus().Warningln("Bad request response path =", ctx.Request.URL, "http status code =", httpStatusCode)
 		v, ok := httpCodeWithStatus[httpStatusCode]
 		if !ok {
 			return RespRestStatusError(StatusCodeException)
@@ -31,7 +31,7 @@ type HttpStatusCodeCodeHandlerResponse func(ctx *gin.Context, httpStatusCode int
 type RecoverHandlerResponse func(ctx *gin.Context, err any) Response
 
 func init() {
-	httpCodeWithStatus = make(map[int]StatusCode, 6)
+	httpCodeWithStatus = make(map[int]StatusCode, 7)
 	httpCodeWithStatus[http.StatusBadRequest] = StatusCodeBadRequestParameters
 	httpCodeWithStatus[http.StatusForbidden] = StatusCodeForbidden
 	httpCodeWithStatus[http.StatusNotFound] = StatusCodeNotFound
@@ -60,15 +60,14 @@ func RecoverHandler() gin.HandlerFunc {
 func RewriteHttpStatusCodeHandler() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		writer := &responseStatusRewriter{
-			ctx.Writer,
-			0,
+			ResponseWriter: ctx.Writer,
 		}
 		ctx.Writer = writer
 		ctx.Next()
 		if writer.statusCode == 0 {
 			writer.statusCode = writer.ResponseWriter.Status()
 		}
-		writer.WriteStatusNow()
+		writer.ResponseWriter.WriteHeader(writer.statusCode)
 	}
 }
 
@@ -79,7 +78,11 @@ func HttpStatusCodeHandler() gin.HandlerFunc {
 		writer := ctx.Writer
 		var statusCode int
 		if v, ok := writer.(*responseStatusRewriter); ok {
-			statusCode = v.ResponseWriter.Status()
+			if v.statusCode != 0 {
+				statusCode = v.statusCode
+			} else {
+				statusCode = v.ResponseWriter.Status()
+			}
 		} else {
 			statusCode = ctx.Writer.Status()
 		}

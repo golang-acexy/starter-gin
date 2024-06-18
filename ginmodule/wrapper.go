@@ -166,10 +166,6 @@ func (r *responseStatusRewriter) Status() int {
 	return r.statusCode
 }
 
-func (r *responseStatusRewriter) WriteStatusNow() {
-	r.ResponseWriter.WriteHeader(r.statusCode)
-}
-
 // ResponseData 标准响应数据内容
 type ResponseData struct {
 	// body响应体负载数据
