@@ -21,6 +21,6 @@ func (a *BasicAuthRouter) Handlers(router *ginmodule.RouterWrapper) {
 
 func (a *BasicAuthRouter) invoke() ginmodule.HandlerWrapper {
 	return func(request *ginmodule.Request) (ginmodule.Response, error) {
-		return ginmodule.RespTextPlain("鉴权成功"), nil
+		return ginmodule.RespTextPlain("request auth success"), nil
 	}
 }

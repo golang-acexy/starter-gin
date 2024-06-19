@@ -29,6 +29,8 @@ func (d *DemoRouter) Handlers(router *ginmodule.RouterWrapper) {
 	router.GET("hold", d.hold())
 
 	router.GET("empty", d.empty())
+
+	router.GET("redirect", d.redirect())
 }
 
 func (d *DemoRouter) more() ginmodule.HandlerWrapper {
@@ -59,12 +61,18 @@ func (d *DemoRouter) hold() ginmodule.HandlerWrapper {
 	return func(request *ginmodule.Request) (ginmodule.Response, error) {
 		fmt.Println("invoke")
 		time.Sleep(time.Second * 5)
-		return ginmodule.RespTextPlain("文本响应"), nil
+		return ginmodule.RespTextPlain("text"), nil
 	}
 }
 
 func (d *DemoRouter) empty() ginmodule.HandlerWrapper {
 	return func(request *ginmodule.Request) (ginmodule.Response, error) {
 		return nil, nil
+	}
+}
+
+func (d *DemoRouter) redirect() ginmodule.HandlerWrapper {
+	return func(request *ginmodule.Request) (ginmodule.Response, error) {
+		return ginmodule.RespRedirect("https://google.com"), nil
 	}
 }

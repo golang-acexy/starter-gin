@@ -1,6 +1,7 @@
 package ginmodule
 
 import (
+	"github.com/acexy/golang-toolkit/logger"
 	"github.com/acexy/golang-toolkit/util/json"
 	"github.com/gin-gonic/gin"
 	"net/http"
@@ -37,7 +38,7 @@ type restResp struct {
 	responseData *ResponseData
 }
 
-func (r restResp) Data() *ResponseData {
+func (r *restResp) Data() *ResponseData {
 	return r.responseData
 }
 
@@ -45,17 +46,18 @@ func (r restResp) Data() *ResponseData {
 func NewRespRest() *restResp {
 	resp := new(restResp)
 	resp.responseData = &ResponseData{}
+	resp.responseData.contentType = gin.MIMEJSON
 	return resp
 }
 
 // DataBuilder 响应数据构造器
-func (r restResp) DataBuilder(fn func(data *ResponseData)) Response {
+func (r *restResp) DataBuilder(fn func(data *ResponseData)) Response {
 	fn(r.responseData)
 	return r
 }
 
 // RestData 设置Rest标准的响应结构
-func (r restResp) RestData(data any) *ResponseData {
+func (r *restResp) RestData(data any) *ResponseData {
 	bytes, err := defaultResponseDataDecoder.Decode(data)
 	if err != nil {
 		panic(err)
@@ -65,7 +67,7 @@ func (r restResp) RestData(data any) *ResponseData {
 }
 
 // RestDataResponse 设置Rest标准的响应结构 并返回响应体数据
-func (r restResp) RestDataResponse(data any) Response {
+func (r *restResp) RestDataResponse(data any) Response {
 	bytes, err := defaultResponseDataDecoder.Decode(data)
 	if err != nil {
 		panic(err)
@@ -75,7 +77,7 @@ func (r restResp) RestDataResponse(data any) Response {
 }
 
 // ToResponse 转换为响应体数据
-func (r restResp) ToResponse() Response {
+func (r *restResp) ToResponse() Response {
 	return r
 }
 
@@ -142,7 +144,7 @@ type commonResp struct {
 	responseData *ResponseData
 }
 
-func (c commonResp) Data() *ResponseData {
+func (c *commonResp) Data() *ResponseData {
 	return nil
 }
 
@@ -154,12 +156,12 @@ func NewCommonResp() *commonResp {
 }
 
 // DataBuilder 响应数据构造器
-func (c commonResp) DataBuilder() *ResponseData {
+func (c *commonResp) DataBuilder() *ResponseData {
 	return c.responseData
 }
 
 // RestData 设置Rest标准的响应结构
-func (c commonResp) RestData(data any) *ResponseData {
+func (c *commonResp) RestData(data any) *ResponseData {
 	bytes, err := defaultResponseDataDecoder.Decode(data)
 	if err != nil {
 		panic(err)
@@ -169,7 +171,7 @@ func (c commonResp) RestData(data any) *ResponseData {
 }
 
 // RestDataResponse 设置Rest标准的响应结构 并返回响应体数据
-func (c commonResp) RestDataResponse(data any) Response {
+func (c *commonResp) RestDataResponse(data any) Response {
 	bytes, err := defaultResponseDataDecoder.Decode(data)
 	if err != nil {
 		panic(err)
@@ -179,27 +181,27 @@ func (c commonResp) RestDataResponse(data any) Response {
 }
 
 // ToResponse 转换为响应体数据
-func (c commonResp) ToResponse() Response {
+func (c *commonResp) ToResponse() Response {
 	return c
 }
 
 // RespStatusCode 设置响应状态码
 func RespStatusCode(statusCode int) Response {
-	return commonResp{ginFn: func(context *gin.Context) {
+	return &commonResp{ginFn: func(context *gin.Context) {
 		context.Status(statusCode)
 	}}
 }
 
 // RespAbortWithStatus 设置响应状态码并设置忽略执行后续handler
 func RespAbortWithStatus(statusCode int) Response {
-	return commonResp{ginFn: func(context *gin.Context) {
+	return &commonResp{ginFn: func(context *gin.Context) {
 		context.AbortWithStatus(statusCode)
 	}}
 }
 
 // RespJson 响应Json数据
 func RespJson(data any, httpStatusCode ...int) Response {
-	return commonResp{ginFn: func(context *gin.Context) {
+	return &commonResp{ginFn: func(context *gin.Context) {
 		statusCode := http.StatusOK
 		if len(httpStatusCode) > 0 {
 			statusCode = httpStatusCode[0]
@@ -210,7 +212,7 @@ func RespJson(data any, httpStatusCode ...int) Response {
 
 // RespXml 响应Xml数据
 func RespXml(data any, httpStatusCode ...int) Response {
-	return commonResp{ginFn: func(context *gin.Context) {
+	return &commonResp{ginFn: func(context *gin.Context) {
 		statusCode := http.StatusOK
 		if len(httpStatusCode) > 0 {
 			statusCode = httpStatusCode[0]
@@ -221,7 +223,7 @@ func RespXml(data any, httpStatusCode ...int) Response {
 
 // RespYaml 响应Yaml数据
 func RespYaml(data any, httpStatusCode ...int) Response {
-	return commonResp{ginFn: func(context *gin.Context) {
+	return &commonResp{ginFn: func(context *gin.Context) {
 		statusCode := http.StatusOK
 		if len(httpStatusCode) > 0 {
 			statusCode = httpStatusCode[0]
@@ -232,7 +234,7 @@ func RespYaml(data any, httpStatusCode ...int) Response {
 
 // RespToml 响应Toml数据
 func RespToml(data any, httpStatusCode ...int) Response {
-	return commonResp{ginFn: func(context *gin.Context) {
+	return &commonResp{ginFn: func(context *gin.Context) {
 		statusCode := http.StatusOK
 		if len(httpStatusCode) > 0 {
 			statusCode = httpStatusCode[0]
@@ -243,11 +245,25 @@ func RespToml(data any, httpStatusCode ...int) Response {
 
 // RespTextPlain 响应Json数据
 func RespTextPlain(data string, httpStatusCode ...int) Response {
-	return commonResp{ginFn: func(context *gin.Context) {
+	return &commonResp{ginFn: func(context *gin.Context) {
 		statusCode := http.StatusOK
 		if len(httpStatusCode) > 0 {
 			statusCode = httpStatusCode[0]
 		}
 		context.Data(statusCode, gin.MIMEPlain, []byte(data))
+	}}
+}
+
+// RespRedirect 响应重定向
+func RespRedirect(url string, httpStatusCode ...int) Response {
+	return &commonResp{ginFn: func(context *gin.Context) {
+		statusCode := http.StatusMovedPermanently
+		if len(httpStatusCode) > 0 {
+			statusCode = httpStatusCode[0]
+			if statusCode < http.StatusMultipleChoices && statusCode > http.StatusPermanentRedirect {
+				logger.Logrus().Warningln("Bad redirect status code", statusCode, "maybe not work")
+			}
+		}
+		context.Redirect(statusCode, url)
 	}}
 }

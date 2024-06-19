@@ -1,6 +1,7 @@
 package ginmodule
 
 import (
+	"bytes"
 	"github.com/acexy/golang-toolkit/logger"
 	"github.com/gin-gonic/gin"
 	"net/http"
@@ -102,7 +103,7 @@ func (r *RouterWrapper) handler(methods []string, path string, handlerWrapper ..
 func httpResponse(context *gin.Context, response Response) {
 
 	// 如果是普通响应 判断是否使用了gin原始响应功能
-	if instance, ok := response.(commonResp); ok {
+	if instance, ok := response.(*commonResp); ok {
 		if instance.ginFn != nil {
 			instance.ginFn(context)
 			return
@@ -117,7 +118,6 @@ func httpResponse(context *gin.Context, response Response) {
 	contentType := responseData.contentType
 	if contentType == "" {
 		contentType = gin.MIMEJSON
-		logger.Logrus().Traceln("ContentType is not set, use default", gin.MIMEJSON)
 	}
 
 	httpStatusCode := responseData.statusCode
@@ -146,29 +146,27 @@ func httpResponse(context *gin.Context, response Response) {
 }
 
 // 支持将gin statusCode重写的响应处理器
-type responseStatusRewriter struct {
+type responseRewriter struct {
 	gin.ResponseWriter
+	body       *bytes.Buffer
 	statusCode int
 }
 
-func (r *responseStatusRewriter) WriteHeader(code int) {
+func (r *responseRewriter) WriteHeader(code int) {
 	r.statusCode = code
 }
 
-func (r *responseStatusRewriter) Write(data []byte) (int, error) {
-	if !r.Written() {
-		r.ResponseWriter.WriteHeader(r.statusCode)
-	}
-	return r.ResponseWriter.Write(data)
+func (r *responseRewriter) Write(data []byte) (int, error) {
+	return r.body.Write(data)
 }
 
-func (r *responseStatusRewriter) WriteHeaderNow() {
+func (r *responseRewriter) WriteHeaderNow() {
 	if !r.Written() {
 		r.ResponseWriter.WriteHeader(r.statusCode)
 	}
 }
 
-func (r *responseStatusRewriter) Status() int {
+func (r *responseRewriter) Status() int {
 	return r.statusCode
 }
 
@@ -222,6 +220,9 @@ func (r *ResponseData) SetData(data []byte) *ResponseData {
 }
 
 func (r *ResponseData) SetContentType(contentType string) *ResponseData {
+	if r.contentType != "" {
+		logger.Logrus().Traceln("rewrite rest response content-type current =", r.contentType, "target =", contentType)
+	}
 	r.contentType = contentType
 	return r
 }

@@ -2,6 +2,7 @@ package test
 
 import (
 	"fmt"
+	"github.com/acexy/golang-toolkit/logger"
 	"github.com/acexy/golang-toolkit/sys"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-acexy/starter-gin/ginmodule"
@@ -21,7 +22,6 @@ func init() {
 			context.String(http.StatusOK, "alive")
 		})
 	}
-
 	moduleLoaders = []declaration.ModuleLoader{&ginmodule.GinModule{
 		ListenAddress: ":8080",
 		DebugModule:   true,
@@ -30,13 +30,16 @@ func init() {
 			&router.ParamRouter{},
 			&router.AbortRouter{},
 			&router.BasicAuthRouter{},
+			&router.MyRestRouter{},
 		},
-		GinInterceptor: interceptor,
+		GinInterceptor:                      interceptor,
+		DisabledDefaultIgnoreHttpStatusCode: true,
 	}}
 
 }
 
 // 默认Gin表现行为
+// 启用了非200状态码自动包裹响应
 func TestGinDefault(t *testing.T) {
 	module := declaration.Module{
 		ModuleLoaders: moduleLoaders,
@@ -51,25 +54,21 @@ func TestGinDefault(t *testing.T) {
 	sys.ShutdownHolding()
 }
 
-// 自定义Gin的表现
-// 将在和默认行为相同的路由功能代码下表现不同的响应
+// 自定义Gin的表现 将在和默认行为相同的路由功能代码下表现不同的响应
+// 禁用了http异常响应码自动包裹
+// 自定义panic异常响应
 func TestGinCustomer(t *testing.T) {
 
-	ginConfig := []declaration.ModuleLoader{&ginmodule.GinModule{
-		ListenAddress:                ":8080",
-		DebugModule:                  true,
-		DisableHttpStatusCodeHandler: true,
-		Routers: []ginmodule.Router{
-			&router.DemoRouter{},
-			&router.ParamRouter{},
-			&router.AbortRouter{},
-			&router.BasicAuthRouter{},
-			&router.MyRestRouter{},
-		},
-	}}
-
+	ginModule := moduleLoaders[0]
+	ginConfig, _ := ginModule.(*ginmodule.GinModule)
+	ginConfig.DisableMethodNotAllowedError = true
+	ginConfig.RecoverHandlerResponse = func(ctx *gin.Context, err any) ginmodule.Response {
+		logger.Logrus().Errorln("Request catch exception", err)
+		return ginmodule.RespTextPlain("something error", http.StatusOK)
+	}
+	ginConfig.DisableHttpStatusCodeHandler = true
 	module := declaration.Module{
-		ModuleLoaders: ginConfig,
+		ModuleLoaders: moduleLoaders,
 	}
 
 	err := module.Load()
