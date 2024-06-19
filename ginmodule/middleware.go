@@ -21,7 +21,7 @@ var defaultIgnoreHttpStatusCode = []int{
 var (
 	// 默认处理状态码handler的响应执行器
 	defaultHttpStatusCodeHandlerResponse HttpStatusCodeCodeHandlerResponse = func(ctx *gin.Context, httpStatusCode int) Response {
-		logger.Logrus().Warningln("Bad response path:", ctx.Request.URL, "test.http status code:", httpStatusCode)
+		logger.Logrus().Warningln("Bad response path:", ctx.Request.URL, "status code:", httpStatusCode)
 		v, ok := httpCodeWithStatus[httpStatusCode]
 		if !ok {
 			return RespRestStatusError(StatusCodeException)
@@ -125,7 +125,7 @@ func httpStatusCodeHandler() gin.HandlerFunc {
 				return
 			}
 			if !isIgnoreHttpStatusCode(statusCode) {
-				logger.Logrus().Warningln("Bad response path:", ctx.Request.URL, "test.http status code:", statusCode)
+				logger.Logrus().Warningln("Bad response path:", ctx.Request.URL, "status code:", statusCode)
 			}
 			response := defaultHttpStatusCodeHandlerResponse(ctx, statusCode)
 			httpResponse(ctx, response)
