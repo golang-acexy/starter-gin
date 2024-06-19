@@ -37,6 +37,7 @@ func (r *Request) UriPathParam(name string) string {
 	return r.ctx.Param(name)
 }
 
+// UriPathParams 获取path路径参数 多个参数
 func (r *Request) UriPathParams(names ...string) map[string]string {
 	result := make(map[string]string, len(names))
 	if len(names) > 0 {
@@ -68,6 +69,7 @@ func (r *Request) UriQueryParamArray(name string) ([]string, bool) {
 	return r.ctx.GetQueryArray(name)
 }
 
+// UriQueryParamMap 获取 uri Query参数值 /?a=b&c=d 多个参数
 func (r *Request) UriQueryParamMap(name string) (map[string]string, bool) {
 	return r.ctx.GetQueryMap(name)
 }
@@ -160,8 +162,9 @@ func (r *Request) FormFile(name string) *multipart.FileHeader {
 // SaveUploadedFile 保存上传的文件内容
 // 任何异常将触发panic响应请求参数错误
 // request	name: form name
-//			dirPath: 保存的路径 (文件夹)
-//			filename: 保存的文件名 若不指定则为源文件名
+//
+//	dirPath: 保存的路径 (文件夹)
+//	filename: 保存的文件名 若不指定则为源文件名
 func (r *Request) SaveUploadedFile(name string, dirPath string, filename ...string) {
 	file := r.FormFile(name)
 	var dist string
