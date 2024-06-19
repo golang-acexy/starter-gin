@@ -139,13 +139,13 @@ func (g *GinModule) Register() (interface{}, error) {
 		if err = server.ListenAndServe(); err != nil {
 			status <- err
 		}
-		close(status)
 	}()
-	v, ok := <-status
-	if !ok {
+	select {
+	case <-time.After(time.Second):
+		return ginEngin, nil
+	case err = <-status:
 		return ginEngin, err
 	}
-	return nil, v
 }
 
 func (g *GinModule) Unregister(maxWaitSeconds uint) (gracefully bool, err error) {
