@@ -5,8 +5,8 @@ GET http://localhost:8080/auth/invoke
 GET http://localhost:8080/auth/invoke
 Authorization: Basic YWNleHk6YWNleHk=
 
-###
+### 404
 GET localhost:8080/auth/invoke1
 
-###
+### demo/more
 GET localhost:8080/demo/more
