@@ -165,7 +165,7 @@ func (r *Request) FormFile(name string) *multipart.FileHeader {
 //
 //	dirPath: 保存的路径 (文件夹)
 //	filename: 保存的文件名 若不指定则为源文件名
-func (r *Request) SaveUploadedFile(name string, dirPath string, filename ...string) {
+func (r *Request) SaveUploadedFile(name string, dirPath string, filename ...string) error {
 	file := r.FormFile(name)
 	var dist string
 	if len(filename) != 0 {
@@ -173,10 +173,7 @@ func (r *Request) SaveUploadedFile(name string, dirPath string, filename ...stri
 	} else {
 		dist = dirPath + string(filepath.Separator) + file.Filename
 	}
-	err := r.ctx.SaveUploadedFile(file, dist)
-	if err != nil {
-		r.ctx.Status(http.StatusBadRequest)
-	}
+	return r.ctx.SaveUploadedFile(file, dist)
 }
 
 // HeaderValue 获取Head name对应的参数值
