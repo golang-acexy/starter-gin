@@ -263,7 +263,7 @@ func (r *Request) SaveUploadedFile(name string, dirPath string, filename ...stri
 	return r.ctx.SaveUploadedFile(file, dist)
 }
 
-// MustSaveUploadedFile SaveUploadedFile 保存上传的文件内容 name: form name dirPath: 保存的路径 (文件夹) filename: 保存的文件名 若不指定则为源文件名
+// MustSaveUploadedFile 保存上传的文件内容 name: form name dirPath: 保存的路径 (文件夹) filename: 保存的文件名 若不指定则为源文件名
 // 任何错误将触发Panic流程中断
 func (r *Request) MustSaveUploadedFile(name string, dirPath string, filename ...string) {
 	err := r.SaveUploadedFile(name, dirPath, filename...)
