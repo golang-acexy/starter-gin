@@ -32,7 +32,7 @@ var (
 
 	defaultRecoverHandlerResponse RecoverHandlerResponse = func(ctx *gin.Context, err any) Response {
 		if v, ok := err.(error); ok {
-			print(v)
+			logger.Logrus().WithError(v).Errorln("Request catch exception path:", ctx.Request.URL, "panic:", err)
 		} else {
 			logger.Logrus().Errorln("Request catch exception path:", ctx.Request.URL, "panic:", err)
 		}

@@ -176,7 +176,6 @@ func (r *Request) SaveUploadedFile(name string, dirPath string, filename ...stri
 	err := r.ctx.SaveUploadedFile(file, dist)
 	if err != nil {
 		r.ctx.Status(http.StatusBadRequest)
-		panic(err)
 	}
 }
 
