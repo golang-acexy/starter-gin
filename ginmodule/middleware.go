@@ -68,6 +68,19 @@ func recoverHandler() gin.HandlerFunc {
 					err = ctx.Err()
 				}
 			}
+			// 内部特殊错误
+			if v, ok := err.(*internalPanic); ok {
+				err = v.rawError
+				writer := ctx.Writer
+				ctx.Status(v.statusCode)
+				// 如果使用了可覆写中间件
+				if w, ok := writer.(*responseRewriter); ok {
+					httpResponse(ctx, defaultHttpStatusCodeHandlerResponse(ctx, v.statusCode))
+					w.ResponseWriter.WriteHeader(w.statusCode)
+					_, _ = w.ResponseWriter.Write(w.body.Bytes())
+					return
+				}
+			}
 			if err != nil {
 				response := defaultRecoverHandlerResponse(ctx, err)
 				if response != nil {

@@ -49,11 +49,11 @@ func (d *ParamRouter) path() ginmodule.HandlerWrapper {
 	return func(request *ginmodule.Request) (ginmodule.Response, error) {
 		fmt.Println("Request Ip", request.RequestIP())
 		// 获取url路径参数
-		uriParams := request.UriPathParams("id", "name", "unknown")
+		uriParams := request.GetPathParams("id", "name", "unknown")
 		fmt.Printf("uriPath %+v\n", uriParams)
 		// demo path /param/uri-path/a/acexy 触发参数错误
 		user := new(UriPathUser)
-		request.BindUriPathParams(user)
+		request.MustBindPathParams(user)
 		fmt.Printf("%+v\n", user)
 		return ginmodule.RespRestSuccess(), nil
 	}
@@ -63,7 +63,7 @@ func (d *ParamRouter) query() ginmodule.HandlerWrapper {
 	return func(request *ginmodule.Request) (ginmodule.Response, error) {
 		user := new(UriQueryUser)
 		// demo path /param/uri-path/query?name=acexy 触发参数错误
-		request.BindUriQueryParams(user)
+		request.BindQueryParams(user)
 		fmt.Printf("%+v\n", user)
 		return ginmodule.RespRestSuccess(), nil
 	}

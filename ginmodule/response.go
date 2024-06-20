@@ -156,27 +156,20 @@ func NewCommonResp() *commonResp {
 }
 
 // DataBuilder 响应数据构造器
-func (c *commonResp) DataBuilder() *ResponseData {
+func (r *commonResp) DataBuilder(fn func(data *ResponseData)) Response {
+	fn(r.responseData)
+	return r
+}
+
+// SetData 响应数据
+func (c *commonResp) SetData(data *ResponseData) *ResponseData {
+	c.responseData = data
 	return c.responseData
 }
 
-// RestData 设置Rest标准的响应结构
-func (c *commonResp) RestData(data any) *ResponseData {
-	bytes, err := defaultResponseDataDecoder.Decode(data)
-	if err != nil {
-		panic(err)
-	}
-	c.responseData.data = bytes
-	return c.responseData
-}
-
-// RestDataResponse 设置Rest标准的响应结构 并返回响应体数据
-func (c *commonResp) RestDataResponse(data any) Response {
-	bytes, err := defaultResponseDataDecoder.Decode(data)
-	if err != nil {
-		panic(err)
-	}
-	c.responseData.data = bytes
+// SetDataToResponse 响应数据
+func (c *commonResp) SetDataToResponse(data *ResponseData) Response {
+	c.responseData = data
 	return c
 }
 

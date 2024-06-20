@@ -21,6 +21,9 @@ func init() {
 		instance.GET("/ping", func(context *gin.Context) {
 			context.String(http.StatusOK, "alive")
 		})
+		instance.GET("/err", func(context *gin.Context) {
+			context.Status(500)
+		})
 	}
 	moduleLoaders = []declaration.ModuleLoader{&ginmodule.GinModule{
 		ListenAddress: ":8080",

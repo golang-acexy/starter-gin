@@ -12,6 +12,12 @@ type BasicAuthAccount struct {
 	Password string
 }
 
+// 定义内部panic 用于特殊处理 中断请求流程
+type internalPanic struct {
+	statusCode int
+	rawError   error
+}
+
 type RouterInfo struct {
 	// GroupPath 路由分组路径
 	GroupPath string
