@@ -26,6 +26,7 @@ type ResponseDataStructDecoder interface {
 	Decode(response any) ([]byte, error)
 }
 
+// 默认解码器
 type responseJsonDataStructDecoder struct {
 }
 
@@ -56,8 +57,8 @@ func (r *restResp) DataBuilder(fn func(data *ResponseData)) Response {
 	return r
 }
 
-// RestData 设置Rest标准的响应结构
-func (r *restResp) RestData(data any) *ResponseData {
+// SetData 设置Rest标准的响应结构
+func (r *restResp) SetData(data any) *ResponseData {
 	bytes, err := defaultResponseDataDecoder.Decode(data)
 	if err != nil {
 		panic(err)
@@ -66,8 +67,8 @@ func (r *restResp) RestData(data any) *ResponseData {
 	return r.responseData
 }
 
-// RestDataResponse 设置Rest标准的响应结构 并返回响应体数据
-func (r *restResp) RestDataResponse(data any) Response {
+// SetDataResponse 设置Rest标准的响应结构 并返回响应体数据
+func (r *restResp) SetDataResponse(data any) Response {
 	bytes, err := defaultResponseDataDecoder.Decode(data)
 	if err != nil {
 		panic(err)
@@ -93,7 +94,7 @@ func RespRestSuccess(data ...any) Response {
 	if len(data) > 0 {
 		dataRest.Data = data[0]
 	}
-	return NewRespRest().RestDataResponse(dataRest)
+	return NewRespRest().SetDataResponse(dataRest)
 }
 
 // RespRestException 响应标准格式的Rest系统异常错误
@@ -105,7 +106,7 @@ func RespRestException() Response {
 			Timestamp:     time.Now().UnixMilli(),
 		},
 	}
-	return NewRespRest().RestDataResponse(dataRest)
+	return NewRespRest().SetDataResponse(dataRest)
 }
 
 // RespRestStatusError 响应标准格式的Rest状态错误
@@ -121,7 +122,7 @@ func RespRestStatusError(statusCode StatusCode, statusMessage ...StatusMessage) 
 	} else {
 		dataRest.Status.StatusMessage = GetStatusMessage(statusCode)
 	}
-	return NewRespRest().RestDataResponse(dataRest)
+	return NewRespRest().SetDataResponse(dataRest)
 }
 
 // RespRestBizError 响应标准格式的Rest业务错误
@@ -135,7 +136,7 @@ func RespRestBizError(bizErrorCode BizErrorCode, bizErrorMessage BizErrorMessage
 			Timestamp:       time.Now().UnixMilli(),
 		},
 	}
-	return NewRespRest().RestDataResponse(dataRest)
+	return NewRespRest().SetDataResponse(dataRest)
 }
 
 // commonResp 普通响应
@@ -156,9 +157,9 @@ func NewCommonResp() *commonResp {
 }
 
 // DataBuilder 响应数据构造器
-func (r *commonResp) DataBuilder(fn func(data *ResponseData)) Response {
-	fn(r.responseData)
-	return r
+func (c *commonResp) DataBuilder(fn func(data *ResponseData)) Response {
+	fn(c.responseData)
+	return c
 }
 
 // SetData 响应数据

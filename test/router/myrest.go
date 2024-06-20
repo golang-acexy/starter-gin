@@ -37,7 +37,7 @@ func (m *MyRestRouter) m1() ginmodule.HandlerWrapper {
 // 使用框架自带的Rest响应自定义结构体
 func (m *MyRestRouter) m2() ginmodule.HandlerWrapper {
 	return func(request *ginmodule.Request) (ginmodule.Response, error) {
-		return ginmodule.NewRespRest().RestDataResponse(&RestStruct{
+		return ginmodule.NewRespRest().SetDataResponse(&RestStruct{
 			Code: 200,
 			Msg:  "success",
 			Data: "invoke",
