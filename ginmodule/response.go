@@ -126,7 +126,7 @@ func RespRestStatusError(statusCode StatusCode, statusMessage ...StatusMessage) 
 }
 
 // RespRestBizError 响应标准格式的Rest业务错误
-func RespRestBizError(bizErrorCode BizErrorCode, bizErrorMessage BizErrorMessage) Response {
+func RespRestBizError(bizErrorCode *BizErrorCode, bizErrorMessage *BizErrorMessage) Response {
 	dataRest := &RestRespStruct{
 		Status: &RestRespStatusStruct{
 			StatusCode:      StatusCodeSuccess,
@@ -179,8 +179,8 @@ func (c *commonResp) ToResponse() Response {
 	return c
 }
 
-// RespStatusCode 设置响应状态码
-func RespStatusCode(statusCode int) Response {
+// RespHttpStatusCode 设置响应状态码
+func RespHttpStatusCode(statusCode int) Response {
 	return &commonResp{ginFn: func(context *gin.Context) {
 		context.Status(statusCode)
 	}}

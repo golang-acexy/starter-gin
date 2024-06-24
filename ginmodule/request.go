@@ -183,9 +183,9 @@ func (r *Request) BindBodyJson(object any) error {
 	return r.ctx.ShouldBindJSON(object)
 }
 
-// MustBodyJson 将请求body数据绑定到json结构体中
+// MustBindBodyJson 将请求body数据绑定到json结构体中
 // 任何错误将触发Panic流程中断
-func (r *Request) MustBodyJson(object any) {
+func (r *Request) MustBindBodyJson(object any) {
 	err := r.BindBodyJson(object)
 	if err != nil {
 		panic(&internalPanic{
