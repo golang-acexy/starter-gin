@@ -67,8 +67,8 @@ type RestRespStatusStruct struct {
 	StatusMessage StatusMessage `json:"statusMessage"`
 
 	// 业务错误码 仅当StatusCode为200时进入业务错误判断
-	BizErrorCode    BizErrorCode    `json:"bizErrorCode"`
-	BizErrorMessage BizErrorMessage `json:"bizErrorMessage"`
+	BizErrorCode    *BizErrorCode    `json:"bizErrorCode"`
+	BizErrorMessage *BizErrorMessage `json:"bizErrorMessage"`
 
 	// 系统响应时间戳
 	Timestamp int64 `json:"timestamp"`
