@@ -12,6 +12,7 @@ import (
 )
 
 var server *http.Server
+var ginEngine *gin.Engine
 
 const (
 	defaultListenAddress = ":8080"
@@ -25,7 +26,7 @@ var (
 type GinStarter struct {
 
 	// 自定义Gin模块的组件属性
-	GinModuleConfig *parent.Setting
+	GinSetting *parent.Setting
 
 	// 模块组件在启动时执行初始化
 	InitFunc func(instance *gin.Engine)
@@ -65,8 +66,8 @@ type GinStarter struct {
 }
 
 func (g *GinStarter) Setting() *parent.Setting {
-	if g.GinModuleConfig != nil {
-		return g.GinModuleConfig
+	if g.GinSetting != nil {
+		return g.GinSetting
 	}
 	return parent.NewSetting(
 		"Gin-Starter",
@@ -90,26 +91,26 @@ func (g *GinStarter) Start() (interface{}, error) {
 
 	gin.DefaultWriter = &logrusLogger{log: logger.Logrus(), level: logrus.DebugLevel}
 	gin.DefaultErrorWriter = &logrusLogger{log: logger.Logrus(), level: logrus.ErrorLevel}
-	ginEngin := gin.New()
+	ginEngine = gin.New()
 
-	ginEngin.Use(recoverHandler())
+	ginEngine.Use(recoverHandler())
 	if g.RecoverHandlerResponse != nil {
 		defaultRecoverHandlerResponse = g.RecoverHandlerResponse
 	}
 
 	if g.MaxMultipartMemory > 0 {
-		ginEngin.MaxMultipartMemory = g.MaxMultipartMemory
+		ginEngine.MaxMultipartMemory = g.MaxMultipartMemory
 	}
 
-	ginEngin.ForwardedByClientIP = !g.DisableForwardedByClientIP
+	ginEngine.ForwardedByClientIP = !g.DisableForwardedByClientIP
 
 	if !g.DisableMethodNotAllowedError {
-		ginEngin.HandleMethodNotAllowed = true
+		ginEngine.HandleMethodNotAllowed = true
 	}
 
 	if !g.DisableHttpStatusCodeHandler {
-		ginEngin.Use(responseRewriteHandler())
-		ginEngin.Use(httpStatusCodeHandler())
+		ginEngine.Use(responseRewriteHandler())
+		ginEngine.Use(httpStatusCodeHandler())
 		disabledDefaultIgnoreHttpStatusCode = g.DisabledDefaultIgnoreHttpStatusCode
 		ignoreHttpStatusCode = g.IgnoreHttpStatusCode
 		if g.HttpStatusCodeCodeHandlerResponse != nil {
@@ -122,7 +123,7 @@ func (g *GinStarter) Start() (interface{}, error) {
 	}
 
 	if len(g.Routers) > 0 {
-		registerRouter(ginEngin, g.Routers)
+		registerRouter(ginEngine, g.Routers)
 	}
 
 	if g.ListenAddress == "" {
@@ -131,7 +132,7 @@ func (g *GinStarter) Start() (interface{}, error) {
 
 	server = &http.Server{
 		Addr:    g.ListenAddress,
-		Handler: ginEngin,
+		Handler: ginEngine,
 	}
 
 	status := make(chan error)
@@ -143,9 +144,9 @@ func (g *GinStarter) Start() (interface{}, error) {
 
 	select {
 	case <-time.After(time.Second):
-		return ginEngin, nil
+		return ginEngine, nil
 	case err = <-status:
-		return ginEngin, err
+		return ginEngine, err
 	}
 }
 
@@ -159,4 +160,9 @@ func (g *GinStarter) Stop(maxWaitTime time.Duration) (gracefully, stopped bool, 
 	}
 	stopped = !net.Telnet(g.ListenAddress, time.Second)
 	return
+}
+
+// RawGinEngine 获取原始的gin引擎实例
+func RawGinEngine() *gin.Engine {
+	return ginEngine
 }
