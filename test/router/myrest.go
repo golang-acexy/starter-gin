@@ -2,7 +2,7 @@ package router
 
 import (
 	"github.com/acexy/golang-toolkit/util/json"
-	"github.com/golang-acexy/starter-gin/ginmodule"
+	"github.com/golang-acexy/starter-gin/ginstarter"
 )
 
 // RestStruct 自定义的Rest结构体
@@ -15,29 +15,29 @@ type RestStruct struct {
 type MyRestRouter struct {
 }
 
-func (m *MyRestRouter) Info() *ginmodule.RouterInfo {
-	return &ginmodule.RouterInfo{
+func (m *MyRestRouter) Info() *ginstarter.RouterInfo {
+	return &ginstarter.RouterInfo{
 		GroupPath: "my-rest",
 	}
 }
 
-func (m *MyRestRouter) Handlers(router *ginmodule.RouterWrapper) {
+func (m *MyRestRouter) Handlers(router *ginstarter.RouterWrapper) {
 	router.GET("m1", m.m1())
 	router.GET("m2", m.m2())
 	router.GET("m3", m.m3())
 }
 
 // 使用框架自带的Rest响应默认Rest结构体
-func (m *MyRestRouter) m1() ginmodule.HandlerWrapper {
-	return func(request *ginmodule.Request) (ginmodule.Response, error) {
-		return ginmodule.RespRestSuccess("data part"), nil
+func (m *MyRestRouter) m1() ginstarter.HandlerWrapper {
+	return func(request *ginstarter.Request) (ginstarter.Response, error) {
+		return ginstarter.RespRestSuccess("data part"), nil
 	}
 }
 
 // 使用框架自带的Rest响应自定义结构体
-func (m *MyRestRouter) m2() ginmodule.HandlerWrapper {
-	return func(request *ginmodule.Request) (ginmodule.Response, error) {
-		return ginmodule.NewRespRest().SetDataResponse(&RestStruct{
+func (m *MyRestRouter) m2() ginstarter.HandlerWrapper {
+	return func(request *ginstarter.Request) (ginstarter.Response, error) {
+		return ginstarter.NewRespRest().SetDataResponse(&RestStruct{
 			Code: 200,
 			Msg:  "success",
 			Data: "invoke",
@@ -46,27 +46,27 @@ func (m *MyRestRouter) m2() ginmodule.HandlerWrapper {
 }
 
 // 自实现Response响应数据
-func (m *MyRestRouter) m3() ginmodule.HandlerWrapper {
-	return func(request *ginmodule.Request) (ginmodule.Response, error) {
+func (m *MyRestRouter) m3() ginstarter.HandlerWrapper {
+	return func(request *ginstarter.Request) (ginstarter.Response, error) {
 		response := &MyRestResponse{}
-		response.setData(&RestStruct{
-			Code: 200,
-			Msg:  "success",
-			Data: "my rest impl",
-		})
+		response.setData("my rest impl")
 		return response, nil
 	}
 }
 
 type MyRestResponse struct {
-	responseData *ginmodule.ResponseData
+	responseData *ginstarter.ResponseData
 }
 
-func (m *MyRestResponse) Data() *ginmodule.ResponseData {
+func (m *MyRestResponse) Data() *ginstarter.ResponseData {
 	return m.responseData
 }
 
-func (m *MyRestResponse) setData(data *RestStruct) {
-	m.responseData = ginmodule.NewResponseData()
-	m.responseData.SetData(json.ToJsonBytes(data))
+func (m *MyRestResponse) setData(data any) {
+	m.responseData = ginstarter.NewResponseData()
+	m.responseData.SetData(json.ToJsonBytes(&RestStruct{
+		Code: 200,
+		Msg:  "success",
+		Data: data,
+	}))
 }

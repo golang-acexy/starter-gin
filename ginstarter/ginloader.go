@@ -1,16 +1,18 @@
-package ginmodule
+package ginstarter
 
 import (
 	"context"
 	"github.com/acexy/golang-toolkit/logger"
+	"github.com/acexy/golang-toolkit/util/net"
 	"github.com/gin-gonic/gin"
-	"github.com/golang-acexy/starter-parent/parentmodule/declaration"
+	"github.com/golang-acexy/starter-parent/parent"
 	"github.com/sirupsen/logrus"
 	"net/http"
 	"time"
 )
 
 var server *http.Server
+var ginEngine *gin.Engine
 
 const (
 	defaultListenAddress = ":8080"
@@ -21,16 +23,17 @@ var (
 	ignoreHttpStatusCode                []int
 )
 
-type GinModule struct {
+type GinStarter struct {
 
 	// 自定义Gin模块的组件属性
-	GinModuleConfig *declaration.ModuleConfig
+	GinSetting *parent.Setting
 
 	// 模块组件在启动时执行初始化
-	GinInterceptor func(instance *gin.Engine)
+	InitFunc func(instance *gin.Engine)
 
 	// * 注册业务路由
 	Routers []Router
+
 	// * 注册服务监听地址 :8080 (默认)
 	ListenAddress string // ip:port
 
@@ -58,29 +61,27 @@ type GinModule struct {
 	// 关闭包裹405错误展示，使用404代替
 	DisableMethodNotAllowedError bool
 
-	// 开启尝试获取真实IP
-	ForwardedByClientIP bool
+	// 禁用尝试获取真实IP
+	DisableForwardedByClientIP bool
 }
 
-func (g *GinModule) ModuleConfig() *declaration.ModuleConfig {
-	if g.GinModuleConfig != nil {
-		return g.GinModuleConfig
+func (g *GinStarter) Setting() *parent.Setting {
+	if g.GinSetting != nil {
+		return g.GinSetting
 	}
-	return &declaration.ModuleConfig{
-		ModuleName:               "Gin",
-		UnregisterPriority:       0,
-		UnregisterAllowAsync:     true,
-		UnregisterMaxWaitSeconds: 30,
-		LoadInterceptor: func(instance interface{}) {
-			if g.GinInterceptor != nil {
-				g.GinInterceptor(instance.(*gin.Engine))
+	return parent.NewSetting(
+		"Gin-Starter",
+		0,
+		true,
+		time.Second*30,
+		func(instance interface{}) {
+			if g.InitFunc != nil {
+				g.InitFunc(instance.(*gin.Engine))
 			}
-		},
-	}
+		})
 }
 
-func (g *GinModule) Register() (interface{}, error) {
-
+func (g *GinStarter) Start() (interface{}, error) {
 	var err error
 	if g.DebugModule {
 		gin.SetMode(gin.DebugMode)
@@ -90,26 +91,26 @@ func (g *GinModule) Register() (interface{}, error) {
 
 	gin.DefaultWriter = &logrusLogger{log: logger.Logrus(), level: logrus.DebugLevel}
 	gin.DefaultErrorWriter = &logrusLogger{log: logger.Logrus(), level: logrus.ErrorLevel}
-	ginEngin := gin.New()
+	ginEngine = gin.New()
 
-	ginEngin.Use(recoverHandler())
+	ginEngine.Use(recoverHandler())
 	if g.RecoverHandlerResponse != nil {
 		defaultRecoverHandlerResponse = g.RecoverHandlerResponse
 	}
 
 	if g.MaxMultipartMemory > 0 {
-		ginEngin.MaxMultipartMemory = g.MaxMultipartMemory
+		ginEngine.MaxMultipartMemory = g.MaxMultipartMemory
 	}
 
-	ginEngin.ForwardedByClientIP = g.ForwardedByClientIP
+	ginEngine.ForwardedByClientIP = !g.DisableForwardedByClientIP
 
 	if !g.DisableMethodNotAllowedError {
-		ginEngin.HandleMethodNotAllowed = true
+		ginEngine.HandleMethodNotAllowed = true
 	}
 
 	if !g.DisableHttpStatusCodeHandler {
-		ginEngin.Use(responseRewriteHandler())
-		ginEngin.Use(httpStatusCodeHandler())
+		ginEngine.Use(responseRewriteHandler())
+		ginEngine.Use(httpStatusCodeHandler())
 		disabledDefaultIgnoreHttpStatusCode = g.DisabledDefaultIgnoreHttpStatusCode
 		ignoreHttpStatusCode = g.IgnoreHttpStatusCode
 		if g.HttpStatusCodeCodeHandlerResponse != nil {
@@ -122,7 +123,7 @@ func (g *GinModule) Register() (interface{}, error) {
 	}
 
 	if len(g.Routers) > 0 {
-		registerRouter(ginEngin, g.Routers)
+		registerRouter(ginEngine, g.Routers)
 	}
 
 	if g.ListenAddress == "" {
@@ -131,30 +132,37 @@ func (g *GinModule) Register() (interface{}, error) {
 
 	server = &http.Server{
 		Addr:    g.ListenAddress,
-		Handler: ginEngin,
+		Handler: ginEngine,
 	}
+
 	status := make(chan error)
 	go func() {
-		logger.Logrus().Traceln(g.ModuleConfig().ModuleName, "started")
 		if err = server.ListenAndServe(); err != nil {
 			status <- err
 		}
 	}()
+
 	select {
 	case <-time.After(time.Second):
-		return ginEngin, nil
+		return ginEngine, nil
 	case err = <-status:
-		return ginEngin, err
+		return ginEngine, err
 	}
 }
 
-func (g *GinModule) Unregister(maxWaitSeconds uint) (gracefully bool, err error) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(maxWaitSeconds)*time.Second)
+func (g *GinStarter) Stop(maxWaitTime time.Duration) (gracefully, stopped bool, err error) {
+	ctx, cancel := context.WithTimeout(context.Background(), maxWaitTime)
 	defer cancel()
 	if err = server.Shutdown(ctx); err != nil {
 		gracefully = false
 	} else {
 		gracefully = true
 	}
+	stopped = !net.Telnet(g.ListenAddress, time.Second)
 	return
+}
+
+// RawGinEngine 获取原始的gin引擎实例
+func RawGinEngine() *gin.Engine {
+	return ginEngine
 }

@@ -3,9 +3,9 @@ module github.com/golang-acexy/starter-gin
 go 1.20
 
 require (
-	github.com/acexy/golang-toolkit v0.0.10
+	github.com/acexy/golang-toolkit v0.0.11
 	github.com/gin-gonic/gin v1.10.0
-	github.com/golang-acexy/starter-parent v0.0.6
+	github.com/golang-acexy/starter-parent v0.1.1
 	github.com/sirupsen/logrus v1.9.3
 )
 

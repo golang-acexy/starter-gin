@@ -1,4 +1,4 @@
-package ginmodule
+package ginstarter
 
 import (
 	"github.com/acexy/golang-toolkit/logger"
@@ -186,8 +186,8 @@ func RespHttpStatusCode(statusCode int) Response {
 	}}
 }
 
-// RespAbortWithStatus 设置响应状态码并设置忽略执行后续handler
-func RespAbortWithStatus(statusCode int) Response {
+// RespAbortWithHttpStatusCode 设置响应状态码并设置忽略执行后续handler
+func RespAbortWithHttpStatusCode(statusCode int) Response {
 	return &commonResp{ginFn: func(context *gin.Context) {
 		context.AbortWithStatus(statusCode)
 	}}

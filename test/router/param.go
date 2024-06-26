@@ -2,19 +2,19 @@ package router
 
 import (
 	"fmt"
-	"github.com/golang-acexy/starter-gin/ginmodule"
+	"github.com/golang-acexy/starter-gin/ginstarter"
 )
 
 type ParamRouter struct {
 }
 
-func (d *ParamRouter) Info() *ginmodule.RouterInfo {
-	return &ginmodule.RouterInfo{
+func (d *ParamRouter) Info() *ginstarter.RouterInfo {
+	return &ginstarter.RouterInfo{
 		GroupPath: "param",
 	}
 }
 
-func (d *ParamRouter) Handlers(router *ginmodule.RouterWrapper) {
+func (d *ParamRouter) Handlers(router *ginstarter.RouterWrapper) {
 	// demo path /param/uri-path/101/acexy
 	router.GET("uri-path/:id/:name", d.path())
 	// demo path /param/uri-path/query?id=1&name=acexy
@@ -45,8 +45,8 @@ type BodyFormUser struct {
 	Name string `form:"name" binding:"required"`
 }
 
-func (d *ParamRouter) path() ginmodule.HandlerWrapper {
-	return func(request *ginmodule.Request) (ginmodule.Response, error) {
+func (d *ParamRouter) path() ginstarter.HandlerWrapper {
+	return func(request *ginstarter.Request) (ginstarter.Response, error) {
 		fmt.Println("Request Ip", request.RequestIP())
 		// 获取url路径参数
 		uriParams := request.GetPathParams("id", "name", "unknown")
@@ -55,34 +55,34 @@ func (d *ParamRouter) path() ginmodule.HandlerWrapper {
 		user := new(UriPathUser)
 		request.MustBindPathParams(user)
 		fmt.Printf("%+v\n", user)
-		return ginmodule.RespRestSuccess(), nil
+		return ginstarter.RespRestSuccess(), nil
 	}
 }
 
-func (d *ParamRouter) query() ginmodule.HandlerWrapper {
-	return func(request *ginmodule.Request) (ginmodule.Response, error) {
+func (d *ParamRouter) query() ginstarter.HandlerWrapper {
+	return func(request *ginstarter.Request) (ginstarter.Response, error) {
 		user := new(UriQueryUser)
 		// demo path /param/uri-path/query?name=acexy 触发参数错误
 		request.BindQueryParams(user)
 		fmt.Printf("%+v\n", user)
-		return ginmodule.RespRestSuccess(), nil
+		return ginstarter.RespRestSuccess(), nil
 	}
 }
 
-func (d *ParamRouter) json() ginmodule.HandlerWrapper {
-	return func(request *ginmodule.Request) (ginmodule.Response, error) {
+func (d *ParamRouter) json() ginstarter.HandlerWrapper {
+	return func(request *ginstarter.Request) (ginstarter.Response, error) {
 		user := BodyJsonUser{}
 		request.BindBodyJson(&user)
 		fmt.Printf("%+v\n", user)
-		return ginmodule.RespRestSuccess(), nil
+		return ginstarter.RespRestSuccess(), nil
 	}
 }
 
-func (d *ParamRouter) form() ginmodule.HandlerWrapper {
-	return func(request *ginmodule.Request) (ginmodule.Response, error) {
+func (d *ParamRouter) form() ginstarter.HandlerWrapper {
+	return func(request *ginstarter.Request) (ginstarter.Response, error) {
 		user := BodyFormUser{}
 		request.BindBodyForm(&user)
 		fmt.Printf("%+v\n", user)
-		return ginmodule.RespRestSuccess(), nil
+		return ginstarter.RespRestSuccess(), nil
 	}
 }

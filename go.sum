@@ -1,5 +1,5 @@
-github.com/acexy/golang-toolkit v0.0.10 h1:XwToFSGz0zQr6DNBWuVJlv91YihQZ5SyFa/AdKwC9mo=
-github.com/acexy/golang-toolkit v0.0.10/go.mod h1:2xhHYl8xxybJx4q6/ZzcqVbRZtl0MW9ytxUdkjxJp7A=
+github.com/acexy/golang-toolkit v0.0.11 h1:RxZ6rY9GSvH7JqfbSNoUd2IEBGJjJ7XWdcovFDxSmj0=
+github.com/acexy/golang-toolkit v0.0.11/go.mod h1:lZn+XmM/H0Y3AQ3G4BiDwkiKbBXCgGVeTCz02ILhc0s=
 github.com/bytedance/sonic v1.11.9 h1:LFHENlIY/SLzDWverzdOvgMztTxcfcF+cqNsz9pK5zg=
 github.com/bytedance/sonic v1.11.9/go.mod h1:LysEHSvpvDySVdC2f87zGWf6CIKJcAvqab1ZaiQtds4=
 github.com/bytedance/sonic/loader v0.1.1 h1:c+e5Pt1k/cy5wMveRDyk2X4B9hF4g7an8N3zCYjJFNM=
@@ -26,8 +26,8 @@ github.com/go-playground/validator/v10 v10.22.0 h1:k6HsTZ0sTnROkhS//R0O+55JgM8C4
 github.com/go-playground/validator/v10 v10.22.0/go.mod h1:dbuPbCMFw/DrkbEynArYaCwl3amGuJotoKCe95atGMM=
 github.com/goccy/go-json v0.10.3 h1:KZ5WoDbxAIgm2HNbYckL0se1fHD6rz5j4ywS6ebzDqA=
 github.com/goccy/go-json v0.10.3/go.mod h1:oq7eo15ShAhp70Anwd5lgX2pLfOS3QCiwU/PULtXL6M=
-github.com/golang-acexy/starter-parent v0.0.6 h1:NtnCykpaQj1MxbIyk0FwuTrSZ1W7qWXvOJ2lNxprg60=
-github.com/golang-acexy/starter-parent v0.0.6/go.mod h1:ogG+h4P2lt/opG3laeNg6Q75KFryvct0g/k9JZGPODU=
+github.com/golang-acexy/starter-parent v0.1.1 h1:KSf57ItnJfXhP9WZ6Yq9nRLzVsoWr8gOA4qS4CC3wiU=
+github.com/golang-acexy/starter-parent v0.1.1/go.mod h1:lp09SvT0Rsd27M0Zpd+pzKIHjspvKnczAH0TxFfmFLA=
 github.com/google/go-cmp v0.5.5 h1:Khx7svrCpmxxtHBq5j2mp/xVjsi8hQMfNLvJFAlrGgU=
 github.com/google/gofuzz v1.0.0/go.mod h1:dBl0BpW6vV/+mYPU4Po3pmUjxk6FQPldtuIdl/M65Eg=
 github.com/json-iterator/go v1.1.12 h1:PV8peI4a0ysnczrg+LtxykD8LfKY9ML6u2jnxaEnrnM=

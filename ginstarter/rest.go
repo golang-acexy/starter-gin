@@ -1,4 +1,4 @@
-package ginmodule
+package ginstarter
 
 type StatusCode int
 type StatusMessage string
