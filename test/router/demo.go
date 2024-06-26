@@ -3,7 +3,7 @@ package router
 import (
 	"errors"
 	"fmt"
-	"github.com/golang-acexy/starter-gin/ginmodule"
+	"github.com/golang-acexy/starter-gin/ginstarter"
 	"net/http"
 	"time"
 )
@@ -11,13 +11,13 @@ import (
 type DemoRouter struct {
 }
 
-func (d *DemoRouter) Info() *ginmodule.RouterInfo {
-	return &ginmodule.RouterInfo{
+func (d *DemoRouter) Info() *ginstarter.RouterInfo {
+	return &ginstarter.RouterInfo{
 		GroupPath: "demo",
 	}
 }
 
-func (d *DemoRouter) Handlers(router *ginmodule.RouterWrapper) {
+func (d *DemoRouter) Handlers(router *ginstarter.RouterWrapper) {
 
 	router.MATCH([]string{http.MethodGet, http.MethodPost}, "more", d.more())
 
@@ -33,46 +33,46 @@ func (d *DemoRouter) Handlers(router *ginmodule.RouterWrapper) {
 	router.GET("redirect", d.redirect())
 }
 
-func (d *DemoRouter) more() ginmodule.HandlerWrapper {
-	return func(request *ginmodule.Request) (ginmodule.Response, error) {
+func (d *DemoRouter) more() ginstarter.HandlerWrapper {
+	return func(request *ginstarter.Request) (ginstarter.Response, error) {
 		fmt.Println("invoke")
 		// 通过Builder来响应自定义Rest数据 并设置其他http属性
-		return ginmodule.NewRespRest().DataBuilder(func(data *ginmodule.ResponseData) {
-			data.SetStatusCode(http.StatusAccepted).SetData([]byte("success")).AddHeader(ginmodule.NewHeader("test", "test"))
+		return ginstarter.NewRespRest().DataBuilder(func(data *ginstarter.ResponseData) {
+			data.SetStatusCode(http.StatusAccepted).SetData([]byte("success")).AddHeader(ginstarter.NewHeader("test", "test"))
 		}), nil
 	}
 }
 
-func (d *DemoRouter) error1() ginmodule.HandlerWrapper {
-	return func(request *ginmodule.Request) (ginmodule.Response, error) {
+func (d *DemoRouter) error1() ginstarter.HandlerWrapper {
+	return func(request *ginstarter.Request) (ginstarter.Response, error) {
 		// 通过error响应异常请求
 		return nil, errors.New("return error")
 	}
 }
 
-func (d *DemoRouter) error2() ginmodule.HandlerWrapper {
-	return func(request *ginmodule.Request) (ginmodule.Response, error) {
+func (d *DemoRouter) error2() ginstarter.HandlerWrapper {
+	return func(request *ginstarter.Request) (ginstarter.Response, error) {
 		// 通过未处理的崩溃触发异常
 		panic("panic exception")
 	}
 }
 
-func (d *DemoRouter) hold() ginmodule.HandlerWrapper {
-	return func(request *ginmodule.Request) (ginmodule.Response, error) {
+func (d *DemoRouter) hold() ginstarter.HandlerWrapper {
+	return func(request *ginstarter.Request) (ginstarter.Response, error) {
 		fmt.Println("invoke")
 		time.Sleep(time.Second * 5)
-		return ginmodule.RespTextPlain("text"), nil
+		return ginstarter.RespTextPlain("text"), nil
 	}
 }
 
-func (d *DemoRouter) empty() ginmodule.HandlerWrapper {
-	return func(request *ginmodule.Request) (ginmodule.Response, error) {
+func (d *DemoRouter) empty() ginstarter.HandlerWrapper {
+	return func(request *ginstarter.Request) (ginstarter.Response, error) {
 		return nil, nil
 	}
 }
 
-func (d *DemoRouter) redirect() ginmodule.HandlerWrapper {
-	return func(request *ginmodule.Request) (ginmodule.Response, error) {
-		return ginmodule.RespRedirect("https://google.com"), nil
+func (d *DemoRouter) redirect() ginstarter.HandlerWrapper {
+	return func(request *ginstarter.Request) (ginstarter.Response, error) {
+		return ginstarter.RespRedirect("https://google.com"), nil
 	}
 }

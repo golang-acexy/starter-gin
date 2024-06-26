@@ -1,4 +1,4 @@
-package ginmodule
+package ginstarter
 
 import (
 	"github.com/gin-gonic/gin"

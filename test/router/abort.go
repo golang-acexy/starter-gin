@@ -1,24 +1,24 @@
 package router
 
 import (
-	"github.com/golang-acexy/starter-gin/ginmodule"
+	"github.com/golang-acexy/starter-gin/ginstarter"
 )
 
 type AbortRouter struct {
 }
 
-func (a *AbortRouter) Info() *ginmodule.RouterInfo {
-	return &ginmodule.RouterInfo{
+func (a *AbortRouter) Info() *ginstarter.RouterInfo {
+	return &ginstarter.RouterInfo{
 		GroupPath: "abort",
 	}
 }
 
-func (a *AbortRouter) Handlers(router *ginmodule.RouterWrapper) {
+func (a *AbortRouter) Handlers(router *ginstarter.RouterWrapper) {
 	router.GET("invoke", a.invoke())
 }
 
-func (a *AbortRouter) invoke() ginmodule.HandlerWrapper {
-	return func(request *ginmodule.Request) (ginmodule.Response, error) {
-		return ginmodule.RespAbortWithStatus(203), nil
+func (a *AbortRouter) invoke() ginstarter.HandlerWrapper {
+	return func(request *ginstarter.Request) (ginstarter.Response, error) {
+		return ginstarter.RespAbortWithStatus(203), nil
 	}
 }

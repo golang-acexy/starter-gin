@@ -4,51 +4,48 @@ import (
 	"fmt"
 	"github.com/acexy/golang-toolkit/logger"
 	"github.com/acexy/golang-toolkit/sys"
+	"github.com/acexy/golang-toolkit/util/json"
 	"github.com/gin-gonic/gin"
-	"github.com/golang-acexy/starter-gin/ginmodule"
+	"github.com/golang-acexy/starter-gin/ginstarter"
 	"github.com/golang-acexy/starter-gin/test/router"
-	"github.com/golang-acexy/starter-parent/parentmodule/declaration"
+	"github.com/golang-acexy/starter-parent/parent"
 	"net/http"
 	"testing"
 	"time"
 )
 
-var moduleLoaders []declaration.ModuleLoader
+var starterLoader *parent.StarterLoader
 
 func init() {
-	interceptor := func(instance *gin.Engine) {
-		// 使用interceptor的形式，获取原始gin实例 注册一个伪探活服务
-		instance.GET("/ping", func(context *gin.Context) {
-			context.String(http.StatusOK, "alive")
-		})
-		instance.GET("/err", func(context *gin.Context) {
-			context.Status(500)
-		})
-	}
-	moduleLoaders = []declaration.ModuleLoader{&ginmodule.GinModule{
-		ListenAddress: ":8080",
-		DebugModule:   true,
-		Routers: []ginmodule.Router{
-			&router.DemoRouter{},
-			&router.ParamRouter{},
-			&router.AbortRouter{},
-			&router.BasicAuthRouter{},
-			&router.MyRestRouter{},
+	starterLoader = parent.NewStarterLoader([]parent.Starter{
+		&ginstarter.GinStarter{
+			ListenAddress: ":8080",
+			DebugModule:   true,
+			Routers: []ginstarter.Router{
+				&router.DemoRouter{},
+				&router.ParamRouter{},
+				&router.AbortRouter{},
+				&router.BasicAuthRouter{},
+				&router.MyRestRouter{},
+			},
+			InitFunc: func(instance *gin.Engine) {
+				instance.GET("/ping", func(context *gin.Context) {
+					context.String(http.StatusOK, "alive")
+				})
+				instance.GET("/err", func(context *gin.Context) {
+					context.Status(500)
+				})
+			},
+			DisabledDefaultIgnoreHttpStatusCode: true,
 		},
-		GinInterceptor:                      interceptor,
-		DisabledDefaultIgnoreHttpStatusCode: true,
-	}}
-
+	})
 }
 
 // 默认Gin表现行为
 // 启用了非200状态码自动包裹响应
 func TestGinDefault(t *testing.T) {
-	module := declaration.Module{
-		ModuleLoaders: moduleLoaders,
-	}
 
-	err := module.Load()
+	err := starterLoader.Start()
 	if err != nil {
 		fmt.Printf("%+v\n", err)
 		return
@@ -62,19 +59,36 @@ func TestGinDefault(t *testing.T) {
 // 自定义panic异常响应
 func TestGinCustomer(t *testing.T) {
 
-	ginModule := moduleLoaders[0]
-	ginConfig, _ := ginModule.(*ginmodule.GinModule)
-	ginConfig.DisableMethodNotAllowedError = true
-	ginConfig.RecoverHandlerResponse = func(ctx *gin.Context, err any) ginmodule.Response {
-		logger.Logrus().Errorln("Request catch exception", err)
-		return ginmodule.RespTextPlain("something error", http.StatusOK)
-	}
-	ginConfig.DisableHttpStatusCodeHandler = true
-	module := declaration.Module{
-		ModuleLoaders: moduleLoaders,
-	}
+	loader := parent.NewStarterLoader([]parent.Starter{
+		&ginstarter.GinStarter{
+			ListenAddress: ":8080",
+			DebugModule:   true,
+			Routers: []ginstarter.Router{
+				&router.DemoRouter{},
+				&router.ParamRouter{},
+				&router.AbortRouter{},
+				&router.BasicAuthRouter{},
+				&router.MyRestRouter{},
+			},
+			InitFunc: func(instance *gin.Engine) {
+				instance.GET("/ping", func(context *gin.Context) {
+					context.String(http.StatusOK, "alive")
+				})
+				instance.GET("/err", func(context *gin.Context) {
+					context.Status(500)
+				})
+			},
+			DisabledDefaultIgnoreHttpStatusCode: true,
+			DisableMethodNotAllowedError:        true,
+			RecoverHandlerResponse: func(ctx *gin.Context, err any) ginstarter.Response {
+				logger.Logrus().Errorln("Request catch exception", err)
+				return ginstarter.RespTextPlain("something error", http.StatusOK)
+			},
+			DisableHttpStatusCodeHandler: true,
+		},
+	})
 
-	err := module.Load()
+	err := loader.Start()
 	if err != nil {
 		fmt.Printf("%+v\n", err)
 		return
@@ -84,18 +98,16 @@ func TestGinCustomer(t *testing.T) {
 }
 
 func TestGinLoadAndUnload(t *testing.T) {
-	module := declaration.Module{
-		ModuleLoaders: moduleLoaders,
-	}
-
-	err := module.Load()
+	err := starterLoader.Start()
 	if err != nil {
 		fmt.Printf("%+v\n", err)
 		return
 	}
-
 	time.Sleep(time.Second * 5)
-
-	shutdownResult := module.UnloadByConfig()
-	fmt.Printf("%+v\n", shutdownResult)
+	stopResult, err := starterLoader.StopBySetting()
+	if err != nil {
+		fmt.Printf("%+v\n", err)
+		return
+	}
+	fmt.Println(json.ToJsonFormat(stopResult))
 }

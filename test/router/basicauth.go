@@ -1,26 +1,26 @@
 package router
 
-import "github.com/golang-acexy/starter-gin/ginmodule"
+import "github.com/golang-acexy/starter-gin/ginstarter"
 
 type BasicAuthRouter struct {
 }
 
-func (a *BasicAuthRouter) Info() *ginmodule.RouterInfo {
-	return &ginmodule.RouterInfo{
+func (a *BasicAuthRouter) Info() *ginstarter.RouterInfo {
+	return &ginstarter.RouterInfo{
 		GroupPath: "auth",
-		BasicAuthAccount: &ginmodule.BasicAuthAccount{
+		BasicAuthAccount: &ginstarter.BasicAuthAccount{
 			Username: "acexy",
 			Password: "acexy",
 		},
 	}
 }
 
-func (a *BasicAuthRouter) Handlers(router *ginmodule.RouterWrapper) {
+func (a *BasicAuthRouter) Handlers(router *ginstarter.RouterWrapper) {
 	router.GET("invoke", a.invoke())
 }
 
-func (a *BasicAuthRouter) invoke() ginmodule.HandlerWrapper {
-	return func(request *ginmodule.Request) (ginmodule.Response, error) {
-		return ginmodule.RespTextPlain("request auth success"), nil
+func (a *BasicAuthRouter) invoke() ginstarter.HandlerWrapper {
+	return func(request *ginstarter.Request) (ginstarter.Response, error) {
+		return ginstarter.RespTextPlain("request auth success"), nil
 	}
 }

@@ -1,10 +1,11 @@
-package ginmodule
+package ginstarter
 
 import (
 	"context"
 	"github.com/acexy/golang-toolkit/logger"
+	"github.com/acexy/golang-toolkit/util/net"
 	"github.com/gin-gonic/gin"
-	"github.com/golang-acexy/starter-parent/parentmodule/declaration"
+	"github.com/golang-acexy/starter-parent/parent"
 	"github.com/sirupsen/logrus"
 	"net/http"
 	"time"
@@ -21,16 +22,17 @@ var (
 	ignoreHttpStatusCode                []int
 )
 
-type GinModule struct {
+type GinStarter struct {
 
 	// 自定义Gin模块的组件属性
-	GinModuleConfig *declaration.ModuleConfig
+	GinModuleConfig *parent.Setting
 
 	// 模块组件在启动时执行初始化
-	GinInterceptor func(instance *gin.Engine)
+	InitFunc func(instance *gin.Engine)
 
 	// * 注册业务路由
 	Routers []Router
+
 	// * 注册服务监听地址 :8080 (默认)
 	ListenAddress string // ip:port
 
@@ -62,25 +64,23 @@ type GinModule struct {
 	ForwardedByClientIP bool
 }
 
-func (g *GinModule) ModuleConfig() *declaration.ModuleConfig {
+func (g *GinStarter) Setting() *parent.Setting {
 	if g.GinModuleConfig != nil {
 		return g.GinModuleConfig
 	}
-	return &declaration.ModuleConfig{
-		ModuleName:               "Gin",
-		UnregisterPriority:       0,
-		UnregisterAllowAsync:     true,
-		UnregisterMaxWaitSeconds: 30,
-		LoadInterceptor: func(instance interface{}) {
-			if g.GinInterceptor != nil {
-				g.GinInterceptor(instance.(*gin.Engine))
+	return parent.NewSetting(
+		"Gin-Starter",
+		0,
+		true,
+		time.Second*30,
+		func(instance interface{}) {
+			if g.InitFunc != nil {
+				g.InitFunc(instance.(*gin.Engine))
 			}
-		},
-	}
+		})
 }
 
-func (g *GinModule) Register() (interface{}, error) {
-
+func (g *GinStarter) Start() (interface{}, error) {
 	var err error
 	if g.DebugModule {
 		gin.SetMode(gin.DebugMode)
@@ -133,13 +133,14 @@ func (g *GinModule) Register() (interface{}, error) {
 		Addr:    g.ListenAddress,
 		Handler: ginEngin,
 	}
+
 	status := make(chan error)
 	go func() {
-		logger.Logrus().Traceln(g.ModuleConfig().ModuleName, "started")
 		if err = server.ListenAndServe(); err != nil {
 			status <- err
 		}
 	}()
+
 	select {
 	case <-time.After(time.Second):
 		return ginEngin, nil
@@ -148,13 +149,14 @@ func (g *GinModule) Register() (interface{}, error) {
 	}
 }
 
-func (g *GinModule) Unregister(maxWaitSeconds uint) (gracefully bool, err error) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(maxWaitSeconds)*time.Second)
+func (g *GinStarter) Stop(maxWaitTime time.Duration) (gracefully, stopped bool, err error) {
+	ctx, cancel := context.WithTimeout(context.Background(), maxWaitTime)
 	defer cancel()
 	if err = server.Shutdown(ctx); err != nil {
 		gracefully = false
 	} else {
 		gracefully = true
 	}
+	stopped = !net.Telnet(g.ListenAddress, time.Second)
 	return
 }
