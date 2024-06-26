@@ -60,8 +60,8 @@ type GinStarter struct {
 	// 关闭包裹405错误展示，使用404代替
 	DisableMethodNotAllowedError bool
 
-	// 开启尝试获取真实IP
-	ForwardedByClientIP bool
+	// 禁用尝试获取真实IP
+	DisableForwardedByClientIP bool
 }
 
 func (g *GinStarter) Setting() *parent.Setting {
@@ -101,7 +101,7 @@ func (g *GinStarter) Start() (interface{}, error) {
 		ginEngin.MaxMultipartMemory = g.MaxMultipartMemory
 	}
 
-	ginEngin.ForwardedByClientIP = g.ForwardedByClientIP
+	ginEngin.ForwardedByClientIP = !g.DisableForwardedByClientIP
 
 	if !g.DisableMethodNotAllowedError {
 		ginEngin.HandleMethodNotAllowed = true

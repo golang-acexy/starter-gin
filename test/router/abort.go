@@ -19,6 +19,6 @@ func (a *AbortRouter) Handlers(router *ginstarter.RouterWrapper) {
 
 func (a *AbortRouter) invoke() ginstarter.HandlerWrapper {
 	return func(request *ginstarter.Request) (ginstarter.Response, error) {
-		return ginstarter.RespAbortWithStatus(203), nil
+		return ginstarter.RespAbortWithHttpStatusCode(203), nil
 	}
 }
