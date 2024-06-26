@@ -49,11 +49,7 @@ func (m *MyRestRouter) m2() ginstarter.HandlerWrapper {
 func (m *MyRestRouter) m3() ginstarter.HandlerWrapper {
 	return func(request *ginstarter.Request) (ginstarter.Response, error) {
 		response := &MyRestResponse{}
-		response.setData(&RestStruct{
-			Code: 200,
-			Msg:  "success",
-			Data: "my rest impl",
-		})
+		response.setData("my rest impl")
 		return response, nil
 	}
 }
@@ -66,7 +62,11 @@ func (m *MyRestResponse) Data() *ginstarter.ResponseData {
 	return m.responseData
 }
 
-func (m *MyRestResponse) setData(data *RestStruct) {
+func (m *MyRestResponse) setData(data any) {
 	m.responseData = ginstarter.NewResponseData()
-	m.responseData.SetData(json.ToJsonBytes(data))
+	m.responseData.SetData(json.ToJsonBytes(&RestStruct{
+		Code: 200,
+		Msg:  "success",
+		Data: data,
+	}))
 }
