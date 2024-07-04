@@ -1,5 +1,5 @@
-github.com/acexy/golang-toolkit v0.0.11 h1:RxZ6rY9GSvH7JqfbSNoUd2IEBGJjJ7XWdcovFDxSmj0=
-github.com/acexy/golang-toolkit v0.0.11/go.mod h1:lZn+XmM/H0Y3AQ3G4BiDwkiKbBXCgGVeTCz02ILhc0s=
+github.com/acexy/golang-toolkit v0.0.14 h1:Aoz/PatuIDQ8j2lN4/vqcJNOE8mv85RcPsbhYsP9o5o=
+github.com/acexy/golang-toolkit v0.0.14/go.mod h1:AHH70PoF5X9zXpAoBSBb4+kfeYPO/1tXOtONEu/QNlc=
 github.com/bytedance/sonic v1.11.9 h1:LFHENlIY/SLzDWverzdOvgMztTxcfcF+cqNsz9pK5zg=
 github.com/bytedance/sonic v1.11.9/go.mod h1:LysEHSvpvDySVdC2f87zGWf6CIKJcAvqab1ZaiQtds4=
 github.com/bytedance/sonic/loader v0.1.1 h1:c+e5Pt1k/cy5wMveRDyk2X4B9hF4g7an8N3zCYjJFNM=

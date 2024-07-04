@@ -14,10 +14,6 @@ import (
 var server *http.Server
 var ginEngine *gin.Engine
 
-const (
-	defaultListenAddress = ":8080"
-)
-
 var (
 	disabledDefaultIgnoreHttpStatusCode bool
 	ignoreHttpStatusCode                []int
@@ -127,7 +123,7 @@ func (g *GinStarter) Start() (interface{}, error) {
 	}
 
 	if g.ListenAddress == "" {
-		g.ListenAddress = defaultListenAddress
+		g.ListenAddress = ":8080"
 	}
 
 	server = &http.Server{
@@ -135,17 +131,17 @@ func (g *GinStarter) Start() (interface{}, error) {
 		Handler: ginEngine,
 	}
 
-	status := make(chan error)
+	errChn := make(chan error)
 	go func() {
 		if err = server.ListenAndServe(); err != nil {
-			status <- err
+			errChn <- err
 		}
 	}()
 
 	select {
 	case <-time.After(time.Second):
 		return ginEngine, nil
-	case err = <-status:
+	case err = <-errChn:
 		return ginEngine, err
 	}
 }
