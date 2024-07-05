@@ -63,7 +63,7 @@ func (m *MyRestResponse) Data() *ginstarter.ResponseData {
 }
 
 func (m *MyRestResponse) setData(data any) {
-	m.responseData = ginstarter.NewResponseData()
+	m.responseData = ginstarter.NewEmptyResponseData()
 	m.responseData.SetData(json.ToJsonBytes(&RestStruct{
 		Code: 200,
 		Msg:  "success",

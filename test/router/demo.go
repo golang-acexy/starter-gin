@@ -31,6 +31,7 @@ func (d *DemoRouter) Handlers(router *ginstarter.RouterWrapper) {
 	router.GET("empty", d.empty())
 
 	router.GET("redirect", d.redirect())
+	router.GET("common", d.common())
 }
 
 func (d *DemoRouter) more() ginstarter.HandlerWrapper {
@@ -74,5 +75,13 @@ func (d *DemoRouter) empty() ginstarter.HandlerWrapper {
 func (d *DemoRouter) redirect() ginstarter.HandlerWrapper {
 	return func(request *ginstarter.Request) (ginstarter.Response, error) {
 		return ginstarter.RespRedirect("https://google.com"), nil
+	}
+}
+
+func (d *DemoRouter) common() ginstarter.HandlerWrapper {
+	return func(request *ginstarter.Request) (ginstarter.Response, error) {
+		return ginstarter.NewCommonResp().DataBuilder(func() *ginstarter.ResponseData {
+			return ginstarter.NewEmptyResponseData().SetData([]byte("112"))
+		}), nil
 	}
 }
