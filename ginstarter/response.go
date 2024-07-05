@@ -146,7 +146,7 @@ type commonResp struct {
 }
 
 func (c *commonResp) Data() *ResponseData {
-	return nil
+	return c.responseData
 }
 
 // NewCommonResp 创建一个普通响应
@@ -157,8 +157,8 @@ func NewCommonResp() *commonResp {
 }
 
 // DataBuilder 响应数据构造器
-func (c *commonResp) DataBuilder(fn func(data *ResponseData)) Response {
-	fn(c.responseData)
+func (c *commonResp) DataBuilder(fn func() *ResponseData) Response {
+	c.responseData = fn()
 	return c
 }
 

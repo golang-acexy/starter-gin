@@ -13,6 +13,11 @@ type Request struct {
 	ctx *gin.Context
 }
 
+// RawGinContext 获取原始Gin上下文
+func (r *Request) RawGinContext() *gin.Context {
+	return r.ctx
+}
+
 // HttpMethod 获取请求方法
 func (r *Request) HttpMethod() string {
 	return r.ctx.Request.Method
@@ -23,9 +28,14 @@ func (r *Request) FullPath() string {
 	return r.ctx.FullPath()
 }
 
-// RawGinContext 获取原始Gin上下文
-func (r *Request) RawGinContext() *gin.Context {
-	return r.ctx
+// Host 获取Host信息
+func (r *Request) Host() string {
+	return r.ctx.Request.Host
+}
+
+// Proto 获取请求协议
+func (r *Request) Proto() string {
+	return r.ctx.Request.Proto
 }
 
 // RequestIP 尝试获取请求方客户端IP

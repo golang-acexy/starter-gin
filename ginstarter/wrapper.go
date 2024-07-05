@@ -208,8 +208,15 @@ type ResponseCookie struct {
 	httpOnly bool
 }
 
-func NewResponseData() *ResponseData {
+func NewEmptyResponseData() *ResponseData {
 	return &ResponseData{}
+}
+
+func NewResponseData(contentType string, body []byte) *ResponseData {
+	return &ResponseData{
+		contentType: contentType,
+		data:        body,
+	}
 }
 
 func NewHeader(name, value string) *ResponseHeader {

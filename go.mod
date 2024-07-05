@@ -3,7 +3,7 @@ module github.com/golang-acexy/starter-gin
 go 1.20
 
 require (
-	github.com/acexy/golang-toolkit v0.0.11
+	github.com/acexy/golang-toolkit v0.0.14
 	github.com/gin-gonic/gin v1.10.0
 	github.com/golang-acexy/starter-parent v0.1.1
 	github.com/sirupsen/logrus v1.9.3
@@ -32,7 +32,7 @@ require (
 	golang.org/x/arch v0.8.0 // indirect
 	golang.org/x/crypto v0.24.0 // indirect
 	golang.org/x/net v0.26.0 // indirect
-	golang.org/x/sys v0.21.0 // indirect
+	golang.org/x/sys v0.22.0 // indirect
 	golang.org/x/text v0.16.0 // indirect
 	google.golang.org/protobuf v1.34.2 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
