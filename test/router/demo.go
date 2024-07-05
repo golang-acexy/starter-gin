@@ -81,7 +81,7 @@ func (d *DemoRouter) redirect() ginstarter.HandlerWrapper {
 func (d *DemoRouter) common() ginstarter.HandlerWrapper {
 	return func(request *ginstarter.Request) (ginstarter.Response, error) {
 		return ginstarter.NewCommonResp().DataBuilder(func() *ginstarter.ResponseData {
-			return ginstarter.NewEmptyResponseData().SetData([]byte("112"))
+			return ginstarter.NewEmptyResponseData().SetData([]byte("success"))
 		}), nil
 	}
 }
