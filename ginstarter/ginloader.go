@@ -68,7 +68,7 @@ func (g *GinStarter) Setting() *parent.Setting {
 	return parent.NewSetting(
 		"Gin-Starter",
 		0,
-		true,
+		false,
 		time.Second*30,
 		func(instance interface{}) {
 			if g.InitFunc != nil {
