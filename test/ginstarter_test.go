@@ -16,7 +16,9 @@ import (
 
 var starterLoader *parent.StarterLoader
 
-func init() {
+// 默认Gin表现行为
+// 启用了非200状态码自动包裹响应
+func TestGinDefault(t *testing.T) {
 	starterLoader = parent.NewStarterLoader([]parent.Starter{
 		&ginstarter.GinStarter{
 			ListenAddress: ":8080",
@@ -39,12 +41,6 @@ func init() {
 			DisabledDefaultIgnoreHttpStatusCode: true,
 		},
 	})
-}
-
-// 默认Gin表现行为
-// 启用了非200状态码自动包裹响应
-func TestGinDefault(t *testing.T) {
-
 	err := starterLoader.Start()
 	if err != nil {
 		fmt.Printf("%+v\n", err)
@@ -58,35 +54,41 @@ func TestGinDefault(t *testing.T) {
 // 禁用了http异常响应码自动包裹
 // 自定义panic异常响应
 func TestGinCustomer(t *testing.T) {
-
-	loader := parent.NewStarterLoader([]parent.Starter{
-		&ginstarter.GinStarter{
-			ListenAddress: ":8080",
-			DebugModule:   true,
-			Routers: []ginstarter.Router{
-				&router.DemoRouter{},
-				&router.ParamRouter{},
-				&router.AbortRouter{},
-				&router.BasicAuthRouter{},
-				&router.MyRestRouter{},
-			},
-			InitFunc: func(instance *gin.Engine) {
-				instance.GET("/ping", func(context *gin.Context) {
-					context.String(http.StatusOK, "alive")
-				})
-				instance.GET("/err", func(context *gin.Context) {
-					context.Status(500)
-				})
-			},
-			DisabledDefaultIgnoreHttpStatusCode: true,
-			DisableMethodNotAllowedError:        true,
-			RecoverHandlerResponse: func(ctx *gin.Context, err any) ginstarter.Response {
-				logger.Logrus().Errorln("Request catch exception", err)
-				return ginstarter.RespTextPlain("something error", http.StatusOK)
-			},
-			DisableHttpStatusCodeHandler: true,
+	starter := &ginstarter.GinStarter{
+		ListenAddress: ":8080",
+		DebugModule:   true,
+		Routers: []ginstarter.Router{
+			&router.DemoRouter{},
+			&router.ParamRouter{},
+			&router.AbortRouter{},
+			&router.BasicAuthRouter{},
+			&router.MyRestRouter{},
 		},
-	})
+		InitFunc: func(instance *gin.Engine) {
+			instance.GET("/ping", func(context *gin.Context) {
+				context.String(http.StatusOK, "alive")
+			})
+			instance.GET("/err", func(context *gin.Context) {
+				context.Status(500)
+			})
+		},
+		DisabledDefaultIgnoreHttpStatusCode: true,
+		DisableMethodNotAllowedError:        true,
+		RecoverHandlerResponse: func(ctx *gin.Context, err any) ginstarter.Response {
+			logger.Logrus().Errorln("Request catch exception", err)
+			return ginstarter.RespTextPlain("something error", http.StatusOK)
+		},
+		DisableHttpStatusCodeHandler: true,
+		GlobalMiddlewares: []ginstarter.Middleware{
+			func(request *ginstarter.Request) (ginstarter.Response, bool) {
+				if request.RequestPath() == "/mdw" {
+					return ginstarter.RespTextPlain("middleware", http.StatusOK), false
+				}
+				return ginstarter.RespTextPlain("hello world", http.StatusOK), true
+			},
+		},
+	}
+	loader := parent.NewStarterLoader([]parent.Starter{starter})
 
 	err := loader.Start()
 	if err != nil {
@@ -98,6 +100,11 @@ func TestGinCustomer(t *testing.T) {
 }
 
 func TestGinLoadAndUnload(t *testing.T) {
+	starterLoader = parent.NewStarterLoader([]parent.Starter{
+		&ginstarter.GinStarter{
+			ListenAddress: ":8080",
+			DebugModule:   true},
+	})
 	err := starterLoader.Start()
 	if err != nil {
 		fmt.Printf("%+v\n", err)

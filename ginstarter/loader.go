@@ -36,6 +36,9 @@ type GinStarter struct {
 	// 自定义异常响应处理 如果不指定则使用默认方式
 	RecoverHandlerResponse RecoverHandlerResponse
 
+	// 自定义全局中间件 作用于所有请求 按照顺序执行
+	GlobalMiddlewares []Middleware
+
 	// 禁用错误包装处理器 在出现非200响应码或者异常时，将自动进行转化
 	DisableHttpStatusCodeHandler bool
 	// 在启用非200响应码自动处理后，指定忽略需要自动包裹响应码
@@ -111,6 +114,22 @@ func (g *GinStarter) Start() (interface{}, error) {
 		ignoreHttpStatusCode = g.IgnoreHttpStatusCode
 		if g.HttpStatusCodeCodeHandlerResponse != nil {
 			defaultHttpStatusCodeHandlerResponse = g.HttpStatusCodeCodeHandlerResponse
+		}
+	}
+
+	if len(g.GlobalMiddlewares) > 0 {
+		for _, v := range g.GlobalMiddlewares {
+			if v != nil {
+				ginEngine.Use(func(ctx *gin.Context) {
+					response, continueExecute := v(&Request{ctx: ctx})
+					if !continueExecute {
+						httpResponse(ctx, response)
+						ctx.Abort()
+					} else {
+						ctx.Next()
+					}
+				})
+			}
 		}
 	}
 

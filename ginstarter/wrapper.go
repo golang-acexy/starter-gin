@@ -22,8 +22,8 @@ type RouterInfo struct {
 	// GroupPath 路由分组路径
 	GroupPath string
 
-	// BasicAuthAccount 如果指定基于BasicAuth认证的账户，则该GroupPath下资源将需要权限认证
-	BasicAuthAccount *BasicAuthAccount
+	// 该Router下的中间件执行器
+	Middlewares []Middleware
 }
 
 // RouterWrapper 定义路由包装器
@@ -280,3 +280,5 @@ func (r *ResponseData) AddCookie(cookie *ResponseCookie) *ResponseData {
 	}
 	return r
 }
+
+type Middleware func(request *Request) (Response, bool)
