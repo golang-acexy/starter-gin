@@ -13,11 +13,7 @@ import (
 
 var server *http.Server
 var ginEngine *gin.Engine
-
-var (
-	disabledDefaultIgnoreHttpStatusCode bool
-	ignoreHttpStatusCode                []int
-)
+var ginStarter *GinStarter
 
 type GinStarter struct {
 
@@ -33,27 +29,27 @@ type GinStarter struct {
 	// * 注册服务监听地址 :8080 (默认)
 	ListenAddress string // ip:port
 
-	// 自定义异常响应处理 如果不指定则使用默认方式
-	RecoverHandlerResponse RecoverHandlerResponse
+	// 全局异常响应处理器 如果不指定则使用默认方式
+	PanicResolver ExceptionResolver
+
+	// 禁用异常http响应码Resolver
+	DisableBadHttpCodeResolver bool
+	// 启用异常http响应码Resolver 系统已内置常见的不处理的非正常响应码 可以禁用
+	DisableDefaultIgnoreHttpCode bool
+	// 启用异常http响应码Resolver 指定不处理特定的异常响应码
+	IgnoreHttpCode []int
+	// 启用异常http响应码Resolver 如果不指定则使用默认方式
+	BadHttpCodeResolver ExceptionResolver
 
 	// 自定义全局中间件 作用于所有请求 按照顺序执行
 	GlobalMiddlewares []Middleware
-
-	// 禁用错误包装处理器 在出现非200响应码或者异常时，将自动进行转化
-	DisableHttpStatusCodeHandler bool
-	// 在启用非200响应码自动处理后，指定忽略需要自动包裹响应码
-	IgnoreHttpStatusCode []int
-	// 关闭系统内置的忽略的http状态码
-	DisabledDefaultIgnoreHttpStatusCode bool
-	// 在出现非200响应码或者异常时具体响应策略 如果不指定则使用默认处理器 仅在UseHttpStatusCodeHandler = true 生效
-	HttpStatusCodeCodeHandlerResponse HttpStatusCodeCodeHandlerResponse
 
 	// 响应数据的结构体解码器 默认为JSON方式解码
 	// 在使用NewRespRest响应结构体数据时解码为[]byte数据的解码器
 	// 如果自实现Response接口将不使用解码器
 	ResponseDataStructDecoder ResponseDataStructDecoder
 
-	// gin config
+	// ========== gin config
 	DebugModule        bool
 	MaxMultipartMemory int64
 
@@ -81,6 +77,7 @@ func (g *GinStarter) Setting() *parent.Setting {
 }
 
 func (g *GinStarter) Start() (interface{}, error) {
+	ginStarter = g
 	var err error
 	if g.DebugModule {
 		gin.SetMode(gin.DebugMode)
@@ -93,8 +90,9 @@ func (g *GinStarter) Start() (interface{}, error) {
 	ginEngine = gin.New()
 
 	ginEngine.Use(recoverHandler())
-	if g.RecoverHandlerResponse != nil {
-		defaultRecoverHandlerResponse = g.RecoverHandlerResponse
+
+	if g.PanicResolver == nil {
+		g.PanicResolver = &panicResolver{}
 	}
 
 	if g.MaxMultipartMemory > 0 {
@@ -107,13 +105,11 @@ func (g *GinStarter) Start() (interface{}, error) {
 		ginEngine.HandleMethodNotAllowed = true
 	}
 
-	if !g.DisableHttpStatusCodeHandler {
+	if !g.DisableBadHttpCodeResolver {
 		ginEngine.Use(responseRewriteHandler())
 		ginEngine.Use(httpStatusCodeHandler())
-		disabledDefaultIgnoreHttpStatusCode = g.DisabledDefaultIgnoreHttpStatusCode
-		ignoreHttpStatusCode = g.IgnoreHttpStatusCode
-		if g.HttpStatusCodeCodeHandlerResponse != nil {
-			defaultHttpStatusCodeHandlerResponse = g.HttpStatusCodeCodeHandlerResponse
+		if g.BadHttpCodeResolver == nil {
+			g.BadHttpCodeResolver = &badHttpCodeResolver{}
 		}
 	}
 

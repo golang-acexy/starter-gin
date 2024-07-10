@@ -117,7 +117,7 @@ func RespRestStatusError(statusCode StatusCode, statusMessage ...StatusMessage) 
 			Timestamp:  time.Now().UnixMilli(),
 		},
 	}
-	if len(statusMessage) > 0 {
+	if len(statusMessage) > 0 && statusMessage[0] != "" {
 		dataRest.Status.StatusMessage = statusMessage[0]
 	} else {
 		dataRest.Status.StatusMessage = GetStatusMessage(statusCode)

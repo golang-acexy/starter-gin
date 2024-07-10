@@ -38,7 +38,7 @@ func TestGinDefault(t *testing.T) {
 					context.Status(500)
 				})
 			},
-			DisabledDefaultIgnoreHttpStatusCode: true,
+			DisableDefaultIgnoreHttpCode: true,
 		},
 	})
 	err := starterLoader.Start()
@@ -72,13 +72,13 @@ func TestGinCustomer(t *testing.T) {
 				context.Status(500)
 			})
 		},
-		DisabledDefaultIgnoreHttpStatusCode: true,
-		DisableMethodNotAllowedError:        true,
-		RecoverHandlerResponse: func(ctx *gin.Context, err any) ginstarter.Response {
+		DisableDefaultIgnoreHttpCode: true,
+		DisableMethodNotAllowedError: true,
+		PanicResolver: func(ctx *gin.Context, err any) ginstarter.Response {
 			logger.Logrus().Errorln("Request catch exception", err)
 			return ginstarter.RespTextPlain("something error", http.StatusOK)
 		},
-		DisableHttpStatusCodeHandler: true,
+		DisableBadHttpCodeResolver: true,
 		GlobalMiddlewares: []ginstarter.Middleware{
 			func(request *ginstarter.Request) (ginstarter.Response, bool) {
 				if request.RequestPath() == "/mdw" {

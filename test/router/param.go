@@ -72,7 +72,7 @@ func (d *ParamRouter) query() ginstarter.HandlerWrapper {
 func (d *ParamRouter) json() ginstarter.HandlerWrapper {
 	return func(request *ginstarter.Request) (ginstarter.Response, error) {
 		user := BodyJsonUser{}
-		request.BindBodyJson(&user)
+		request.MustBindBodyJson(&user)
 		fmt.Printf("%+v\n", user)
 		return ginstarter.RespRestSuccess(), nil
 	}
