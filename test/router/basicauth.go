@@ -8,9 +8,13 @@ type BasicAuthRouter struct {
 func (a *BasicAuthRouter) Info() *ginstarter.RouterInfo {
 	return &ginstarter.RouterInfo{
 		GroupPath: "auth",
-		BasicAuthAccount: &ginstarter.BasicAuthAccount{
-			Username: "acexy",
-			Password: "acexy",
+
+		// 为该路由添加中间件
+		Middlewares: []ginstarter.Middleware{
+			ginstarter.BasicAuthMiddleware(&ginstarter.BasicAuthAccount{
+				Username: "acexy",
+				Password: "acexy",
+			}),
 		},
 	}
 }

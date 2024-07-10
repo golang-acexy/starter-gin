@@ -23,9 +23,19 @@ func (r *Request) HttpMethod() string {
 	return r.ctx.Request.Method
 }
 
-// FullPath 获取请求全路径
-func (r *Request) FullPath() string {
+// RouterFullPath 当前请求的注册路由路径
+func (r *Request) RouterFullPath() string {
 	return r.ctx.FullPath()
+}
+
+// RequestPath 获取请求路径
+func (r *Request) RequestPath() string {
+	return r.ctx.Request.URL.Path
+}
+
+// RequestFullPath 获取请求完整路径
+func (r *Request) RequestFullPath() string {
+	return r.ctx.Request.URL.RequestURI()
 }
 
 // Host 获取Host信息

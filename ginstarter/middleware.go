@@ -2,7 +2,9 @@ package ginstarter
 
 import (
 	"bytes"
+	"encoding/base64"
 	"github.com/acexy/golang-toolkit/logger"
+	"github.com/acexy/golang-toolkit/math/conversion"
 	"github.com/gin-gonic/gin"
 	"net/http"
 )
@@ -162,4 +164,20 @@ func isIgnoreHttpStatusCode(httpCode int) bool {
 		}
 	}
 	return false
+}
+
+// 常用的一些中间件
+
+// BasicAuthMiddleware 基础权限校验中间件
+func BasicAuthMiddleware(account *BasicAuthAccount) Middleware {
+	return func(request *Request) (Response, bool) {
+		if request.GetHeader("Authorization") == "" {
+			return RespAbortWithHttpStatusCode(http.StatusUnauthorized), false
+		}
+		enc := "Basic " + base64.StdEncoding.EncodeToString(conversion.ParseBytes(account.Username+":"+account.Password))
+		if request.GetHeader("Authorization") != enc {
+			return RespAbortWithHttpStatusCode(http.StatusUnauthorized), false
+		}
+		return nil, true
+	}
 }
