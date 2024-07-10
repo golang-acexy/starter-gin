@@ -169,8 +169,14 @@ func isIgnoreHttpStatusCode(httpCode int) bool {
 // 常用的一些中间件
 
 // BasicAuthMiddleware 基础权限校验中间件
-func BasicAuthMiddleware(account *BasicAuthAccount) Middleware {
+// math 满足指定条件才执行
+func BasicAuthMiddleware(account *BasicAuthAccount, match ...func(request *Request) bool) Middleware {
 	return func(request *Request) (Response, bool) {
+		if len(match) > 0 {
+			if !match[0](request) {
+				return nil, true
+			}
+		}
 		if request.GetHeader("Authorization") == "" {
 			return RespAbortWithHttpStatusCode(http.StatusUnauthorized), false
 		}
