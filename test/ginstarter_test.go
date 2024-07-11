@@ -2,7 +2,6 @@ package test
 
 import (
 	"fmt"
-	"github.com/acexy/golang-toolkit/logger"
 	"github.com/acexy/golang-toolkit/sys"
 	"github.com/acexy/golang-toolkit/util/json"
 	"github.com/gin-gonic/gin"
@@ -46,7 +45,6 @@ func TestGinDefault(t *testing.T) {
 		fmt.Printf("%+v\n", err)
 		return
 	}
-
 	sys.ShutdownHolding()
 }
 
@@ -64,6 +62,7 @@ func TestGinCustomer(t *testing.T) {
 			&router.BasicAuthRouter{},
 			&router.MyRestRouter{},
 		},
+		HidePanicErrorDetails: false,
 		InitFunc: func(instance *gin.Engine) {
 			instance.GET("/ping", func(context *gin.Context) {
 				context.String(http.StatusOK, "alive")
@@ -72,13 +71,13 @@ func TestGinCustomer(t *testing.T) {
 				context.Status(500)
 			})
 		},
-		DisableDefaultIgnoreHttpCode: true,
-		DisableMethodNotAllowedError: true,
-		PanicResolver: func(ctx *gin.Context, err any) ginstarter.Response {
-			logger.Logrus().Errorln("Request catch exception", err)
-			return ginstarter.RespTextPlain("something error", http.StatusOK)
-		},
 		DisableBadHttpCodeResolver: true,
+		//DisableDefaultIgnoreHttpCode: true,
+		DisableMethodNotAllowedError: false,
+		//PanicResolver: func(ctx *gin.Context, err error) ginstarter.Response {
+		//	logger.Logrus().Errorln("Request catch exception", err)
+		//	return ginstarter.RespTextPlain("something error", http.StatusOK)
+		//},
 		GlobalMiddlewares: []ginstarter.Middleware{
 			func(request *ginstarter.Request) (ginstarter.Response, bool) {
 				if request.RequestPath() == "/mdw" {

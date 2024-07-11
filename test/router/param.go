@@ -36,13 +36,14 @@ type UriQueryUser struct {
 }
 
 type BodyJsonUser struct {
-	Id   uint   `json:"id"`
+	Id   uint   `json:"id" binding:"required,numeric"`
 	Name string `json:"name" binding:"required"`
 }
 
 type BodyFormUser struct {
-	Id   uint   `form:"id"`
-	Name string `form:"name" binding:"required"`
+	Id    uint   `form:"id" binding:"required,min=10"`
+	Name  string `form:"name" binding:"required"`
+	Email string `form:"email" binding:"required,email"`
 }
 
 func (d *ParamRouter) path() ginstarter.HandlerWrapper {
@@ -81,7 +82,7 @@ func (d *ParamRouter) json() ginstarter.HandlerWrapper {
 func (d *ParamRouter) form() ginstarter.HandlerWrapper {
 	return func(request *ginstarter.Request) (ginstarter.Response, error) {
 		user := BodyFormUser{}
-		request.BindBodyForm(&user)
+		request.MustBindBodyForm(&user)
 		fmt.Printf("%+v\n", user)
 		return ginstarter.RespRestSuccess(), nil
 	}

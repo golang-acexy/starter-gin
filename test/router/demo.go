@@ -24,6 +24,7 @@ func (d *DemoRouter) Handlers(router *ginstarter.RouterWrapper) {
 	// path /demo/exception 主动返回的异常触发系统错误
 	router.GET("error1", d.error1())
 	router.GET("error2", d.error2())
+	router.GET("error3", d.error3())
 
 	// path /demo/hold 5s的请求hold
 	router.GET("hold", d.hold())
@@ -55,6 +56,17 @@ func (d *DemoRouter) error2() ginstarter.HandlerWrapper {
 	return func(request *ginstarter.Request) (ginstarter.Response, error) {
 		// 通过未处理的崩溃触发异常
 		panic("panic exception")
+	}
+}
+
+func (d *DemoRouter) error3() ginstarter.HandlerWrapper {
+	return func(request *ginstarter.Request) (ginstarter.Response, error) {
+		// 通过未处理的崩溃触发异常
+		ii := 1
+		ii -= 1
+		i := 1 / ii
+		fmt.Println(i)
+		return nil, nil
 	}
 }
 

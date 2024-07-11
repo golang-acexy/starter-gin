@@ -6,6 +6,8 @@ github.com/acexy/golang-toolkit v0.0.16-0.20240710021726-532244e4599c h1:hfohuCx
 github.com/acexy/golang-toolkit v0.0.16-0.20240710021726-532244e4599c/go.mod h1:ibyPO6K16k5eDjHlyU5Y+IhXeKWphQYMu2UPVkmoqfw=
 github.com/acexy/golang-toolkit v0.0.16 h1:dapLDm8LV8qdZusN8YpN3hCOn9+TX4QF8hS1B44cigA=
 github.com/acexy/golang-toolkit v0.0.16/go.mod h1:ibyPO6K16k5eDjHlyU5Y+IhXeKWphQYMu2UPVkmoqfw=
+github.com/acexy/golang-toolkit v0.0.17-0.20240711025336-64ba05a2b5a4 h1:L+vCqNWPdcmEXK65tDXtnDnzOIgay2z0sbopXbNcJNg=
+github.com/acexy/golang-toolkit v0.0.17-0.20240711025336-64ba05a2b5a4/go.mod h1:ibyPO6K16k5eDjHlyU5Y+IhXeKWphQYMu2UPVkmoqfw=
 github.com/bytedance/sonic v1.11.9 h1:LFHENlIY/SLzDWverzdOvgMztTxcfcF+cqNsz9pK5zg=
 github.com/bytedance/sonic v1.11.9/go.mod h1:LysEHSvpvDySVdC2f87zGWf6CIKJcAvqab1ZaiQtds4=
 github.com/bytedance/sonic/loader v0.1.1 h1:c+e5Pt1k/cy5wMveRDyk2X4B9hF4g7an8N3zCYjJFNM=
