@@ -120,6 +120,10 @@ func (g *GinStarter) Start() (interface{}, error) {
 		}
 	}
 
+	if g.ResponseDataStructDecoder == nil {
+		g.ResponseDataStructDecoder = responseJsonDataStructDecoder{}
+	}
+
 	if len(g.GlobalMiddlewares) > 0 {
 		for _, v := range g.GlobalMiddlewares {
 			if v != nil {
@@ -134,10 +138,6 @@ func (g *GinStarter) Start() (interface{}, error) {
 				})
 			}
 		}
-	}
-
-	if g.ResponseDataStructDecoder != nil {
-		defaultResponseDataDecoder = g.ResponseDataStructDecoder
 	}
 
 	if len(g.Routers) > 0 {

@@ -10,6 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"net/http"
+	"time"
 )
 
 var (
@@ -30,15 +31,36 @@ var (
 	}
 
 	badHttpCodeResolver BadHttpCodeResolver = func(httpStatusCode int, errMsg string) Response {
+
 		var statusMessage StatusMessage
 		if errMsg != "" {
 			statusMessage = StatusMessage(errMsg)
 		}
-		if v, ok := httpCodeWithStatus[httpStatusCode]; ok {
-			return RespRestStatusError(v, statusMessage)
-		} else {
-			return RespRestStatusError(StatusCodeException, statusMessage)
+
+		body := RestRespStruct{
+			Status: &RestRespStatusStruct{
+				Timestamp: time.Now().UnixMilli(),
+			},
 		}
+
+		var statusCode StatusCode
+		if v, ok := httpCodeWithStatus[httpStatusCode]; ok {
+			statusCode = v
+		} else {
+			statusCode = StatusCodeException
+		}
+
+		if statusMessage == "" {
+			body.Status.StatusMessage = GetStatusMessage(statusCode)
+		} else {
+			body.Status.StatusMessage = statusMessage
+		}
+		body.Status.StatusCode = statusCode
+
+		return NewRespRest().DataBuilder(func() *ResponseData {
+			bodyBytes, _ := ginStarter.ResponseDataStructDecoder.Decode(body)
+			return NewResponseData(gin.MIMEJSON, bodyBytes, http.StatusOK)
+		})
 	}
 )
 
@@ -171,7 +193,6 @@ func recoverHandler() gin.HandlerFunc {
 				logger.Logrus().Warningln("Bad response path:", ctx.Request.URL, "status code:", statusCode)
 				response := ginStarter.BadHttpCodeResolver(statusCode, "")
 				httpResponse(ctx, response)
-				ctx.Status(statusCode)
 				if rewriter != nil {
 					rewriter.ResponseWriter.WriteHeader(rewriter.statusCode)
 					_, _ = rewriter.ResponseWriter.Write(rewriter.body.Bytes())

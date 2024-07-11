@@ -39,8 +39,8 @@ func (d *DemoRouter) more() ginstarter.HandlerWrapper {
 	return func(request *ginstarter.Request) (ginstarter.Response, error) {
 		fmt.Println("invoke")
 		// 通过Builder来响应自定义Rest数据 并设置其他http属性
-		return ginstarter.NewRespRest().DataBuilder(func(data *ginstarter.ResponseData) {
-			data.SetStatusCode(http.StatusAccepted).SetData([]byte("success")).AddHeader(ginstarter.NewHeader("test", "test"))
+		return ginstarter.NewRespRest().DataBuilder(func() *ginstarter.ResponseData {
+			return ginstarter.NewEmptyResponseData().SetStatusCode(http.StatusAccepted).SetData([]byte("success")).AddHeader(ginstarter.NewHeader("test", "test"))
 		}), nil
 	}
 }
