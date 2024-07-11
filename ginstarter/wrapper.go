@@ -212,7 +212,14 @@ func NewEmptyResponseData() *ResponseData {
 	return &ResponseData{}
 }
 
-func NewResponseData(contentType string, body []byte, statusCode int) *ResponseData {
+func NewResponseData(contentType string, body []byte) *ResponseData {
+	return &ResponseData{
+		contentType: contentType,
+		data:        body,
+	}
+}
+
+func NewResponseDataWithStatusCode(contentType string, body []byte, statusCode int) *ResponseData {
 	return &ResponseData{
 		contentType: contentType,
 		data:        body,

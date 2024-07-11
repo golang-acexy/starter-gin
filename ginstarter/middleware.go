@@ -59,7 +59,7 @@ var (
 
 		return NewRespRest().DataBuilder(func() *ResponseData {
 			bodyBytes, _ := ginStarter.ResponseDataStructDecoder.Decode(body)
-			return NewResponseData(gin.MIMEJSON, bodyBytes, http.StatusOK)
+			return NewResponseDataWithStatusCode(gin.MIMEJSON, bodyBytes, http.StatusOK)
 		})
 	}
 )
