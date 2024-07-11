@@ -95,6 +95,8 @@ func (g *GinStarter) Start() (interface{}, error) {
 	gin.DefaultErrorWriter = &logrusLogger{log: logger.Logrus(), level: logrus.ErrorLevel}
 	ginEngine = gin.New()
 
+	registerValidators(ginEngine)
+
 	ginEngine.Use(recoverHandler())
 
 	if g.PanicResolver == nil {

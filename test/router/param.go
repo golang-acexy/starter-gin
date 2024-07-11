@@ -41,9 +41,10 @@ type BodyJsonUser struct {
 }
 
 type BodyFormUser struct {
-	Id    uint   `form:"id" binding:"required,min=10"`
-	Name  string `form:"name" binding:"required"`
-	Email string `form:"email" binding:"required,email"`
+	Id     uint   `form:"id" binding:"required,min=10"`
+	Name   string `form:"name" binding:"required"`
+	Email  string `form:"email" binding:"required,email"`
+	Domain string `form:"domain" binding:"domain"`
 }
 
 func (d *ParamRouter) path() ginstarter.HandlerWrapper {

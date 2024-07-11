@@ -3,8 +3,16 @@ package ginstarter
 import (
 	"github.com/acexy/golang-toolkit/util/slice"
 	"github.com/acexy/golang-toolkit/util/str"
+	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
 	"github.com/go-playground/validator/v10"
+	"regexp"
 )
+
+/**
+拓展验证tag
+domain: 域名验证
+*/
 
 var typeDesc = []string{
 	"email",
@@ -20,6 +28,7 @@ var typeDesc = []string{
 	"numeric",
 	"base64",
 	"datetime",
+	"domain",
 }
 
 // friendlyValidatorMessage 处理验证框架错误，友好展示错误信息
@@ -45,4 +54,21 @@ func friendlyValidatorMessage(errors validator.ValidationErrors) string {
 		}
 	}
 	return builder.ToString()
+}
+
+func registerValidators(gin *gin.Engine) {
+	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
+		_ = v.RegisterValidation("domain", domainValidator)
+	}
+}
+
+// 自定义域名验证器
+
+// 域名验证器
+func domainValidator(fl validator.FieldLevel) bool {
+	domain := fl.Field().String()
+	// 定义一个简单的域名正则表达式
+	regex := `^(?i:((([a-zA-Z0-9-_]+)\.)*([a-zA-Z0-9-]{1,63}\.[a-zA-Z]{2,}))|localhost)$`
+	match, _ := regexp.MatchString(regex, domain)
+	return match
 }
