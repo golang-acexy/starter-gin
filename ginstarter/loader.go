@@ -132,6 +132,7 @@ func (g *GinStarter) Start() (interface{}, error) {
 					if !continueExecute {
 						httpResponse(ctx, response)
 						ctx.Abort()
+						return
 					} else {
 						ctx.Next()
 					}

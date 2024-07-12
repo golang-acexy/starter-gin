@@ -15,6 +15,7 @@ func registerRouter(g *gin.Engine, routers []Router) {
 					if !continueExecute {
 						httpResponse(ctx, response)
 						ctx.Abort()
+						return
 					} else {
 						ctx.Next()
 					}
