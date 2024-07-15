@@ -15,6 +15,8 @@ func (d *ParamRouter) Info() *ginstarter.RouterInfo {
 }
 
 func (d *ParamRouter) Handlers(router *ginstarter.RouterWrapper) {
+
+	router.POST1("json", []string{"application-json"}, d.json())
 	// demo path /param/uri-path/101/acexy
 	router.GET("uri-path/:id/:name", d.path())
 	// demo path /param/uri-path/query?id=1&name=acexy
@@ -38,6 +40,8 @@ type UriQueryUser struct {
 type BodyJsonUser struct {
 	Id   uint   `json:"id" binding:"required,numeric"`
 	Name string `json:"name" binding:"required"`
+	Age  uint   `json:"age"`
+	Fat  bool   `json:"fat"`
 }
 
 type BodyFormUser struct {

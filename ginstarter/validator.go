@@ -3,7 +3,6 @@ package ginstarter
 import (
 	"github.com/acexy/golang-toolkit/util/slice"
 	"github.com/acexy/golang-toolkit/util/str"
-	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
 	"github.com/go-playground/validator/v10"
 	"regexp"
@@ -56,7 +55,7 @@ func friendlyValidatorMessage(errors validator.ValidationErrors) string {
 	return builder.ToString()
 }
 
-func registerValidators(gin *gin.Engine) {
+func registerValidators() {
 	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
 		_ = v.RegisterValidation("domain", domainValidator)
 	}

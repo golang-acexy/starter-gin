@@ -3,10 +3,12 @@ package ginstarter
 import (
 	"bytes"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/acexy/golang-toolkit/logger"
 	"github.com/acexy/golang-toolkit/math/conversion"
+	"github.com/acexy/golang-toolkit/util/slice"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"net/http"
@@ -110,6 +112,10 @@ func panicToError(panicError any) (statusCode int, err error, internalError bool
 			if validationErrs, ok := rawError.(validator.ValidationErrors); ok {
 				internalError = true
 				err = errors.New(friendlyValidatorMessage(validationErrs))
+			} else if jsonErr, ok := rawError.(*json.UnmarshalTypeError); ok {
+				err = errors.New(jsonErr.Field + " type mismatch")
+			} else if _, ok := rawError.(*json.SyntaxError); ok {
+				err = errors.New("bad json payload")
 			} else {
 				err = rawError
 			}
@@ -241,6 +247,25 @@ func BasicAuthMiddleware(account *BasicAuthAccount, match ...func(request *Reque
 		enc := "Basic " + base64.StdEncoding.EncodeToString(conversion.ParseBytes(account.Username+":"+account.Password))
 		if request.GetHeader("Authorization") != enc {
 			return RespAbortWithHttpStatusCode(http.StatusUnauthorized), false
+		}
+		return nil, true
+	}
+}
+
+// MediaTypeMiddleware 类型校验中间件
+func MediaTypeMiddleware(contentType []string, match ...func(request *Request) bool) Middleware {
+	return func(request *Request) (Response, bool) {
+		if len(match) > 0 {
+			if !match[0](request) {
+				return nil, true
+			}
+		}
+		if len(contentType) > 0 {
+			if !slice.Contains(contentType, request.GetHeader("Content-Type")) {
+				return RespAbortWithHttpStatusCode(http.StatusUnsupportedMediaType), false
+			}
+		} else {
+			logger.Logrus().Warningln("valid Content-Type restriction not set")
 		}
 		return nil, true
 	}
