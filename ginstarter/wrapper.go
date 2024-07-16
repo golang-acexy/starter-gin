@@ -57,16 +57,9 @@ func (r *RouterWrapper) POST1(path string, contentType []string, handler ...Hand
 func (r *RouterWrapper) GET(path string, handler ...HandlerWrapper) {
 	r.handler([]string{http.MethodGet}, path, nil, handler...)
 }
-func (r *RouterWrapper) GET1(path string, contentType []string, handler ...HandlerWrapper) {
-	r.handler([]string{http.MethodGet}, path, contentType, handler...)
-}
 
 func (r *RouterWrapper) HEAD(path string, handler ...HandlerWrapper) {
 	r.handler([]string{http.MethodHead}, path, nil, handler...)
-}
-
-func (r *RouterWrapper) HEAD1(path string, contentType []string, handler ...HandlerWrapper) {
-	r.handler([]string{http.MethodHead}, path, contentType, handler...)
 }
 
 func (r *RouterWrapper) PUT(path string, handler ...HandlerWrapper) {
@@ -92,9 +85,6 @@ func (r *RouterWrapper) DELETE1(path string, contentType []string, handler ...Ha
 
 func (r *RouterWrapper) OPTIONS(path string, handler ...HandlerWrapper) {
 	r.handler([]string{http.MethodOptions}, path, nil, handler...)
-}
-func (r *RouterWrapper) OPTIONS1(path string, contentType []string, handler ...HandlerWrapper) {
-	r.handler([]string{http.MethodOptions}, path, contentType, handler...)
 }
 
 func (r *RouterWrapper) TRACE(path string, handler ...HandlerWrapper) {
