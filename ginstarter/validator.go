@@ -39,7 +39,7 @@ func friendlyValidatorMessage(errors validator.ValidationErrors) string {
 		// 验证标签
 		tag := vErr.Tag()
 		if slice.Contains(typeDesc, tag) {
-			builder.WriteString(" type ").WriteString(tag)
+			builder.WriteString(" mismatch type ").WriteString(tag)
 		} else {
 			builder.WriteString(" ").WriteString(tag)
 		}
