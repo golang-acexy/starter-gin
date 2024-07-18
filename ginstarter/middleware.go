@@ -3,49 +3,71 @@ package ginstarter
 import (
 	"bytes"
 	"encoding/base64"
+	"encoding/json"
+	"errors"
+	"fmt"
 	"github.com/acexy/golang-toolkit/logger"
 	"github.com/acexy/golang-toolkit/math/conversion"
+	"github.com/acexy/golang-toolkit/util/slice"
 	"github.com/gin-gonic/gin"
+	"github.com/go-playground/validator/v10"
 	"net/http"
+	"time"
 )
-
-var defaultIgnoreHttpStatusCode = []int{
-	http.StatusMultipleChoices,
-	http.StatusMovedPermanently,
-	http.StatusFound,
-	http.StatusNoContent,
-	http.StatusNotModified,
-	http.StatusUseProxy,
-	http.StatusTemporaryRedirect,
-	http.StatusPermanentRedirect,
-}
 
 var (
-	// 默认处理状态码handler的响应执行器
-	defaultHttpStatusCodeHandlerResponse HttpStatusCodeCodeHandlerResponse = func(ctx *gin.Context, httpStatusCode int) Response {
-		logger.Logrus().Warningln("Bad response path:", ctx.Request.URL, "status code:", httpStatusCode)
-		v, ok := httpCodeWithStatus[httpStatusCode]
-		if !ok {
-			return RespRestStatusError(StatusCodeException)
-		} else {
-			return RespRestStatusError(v)
-		}
+	httpCodeWithStatus          map[int]StatusCode
+	defaultIgnoreHttpStatusCode = []int{
+		http.StatusMultipleChoices,
+		http.StatusMovedPermanently,
+		http.StatusFound,
+		http.StatusNoContent,
+		http.StatusNotModified,
+		http.StatusUseProxy,
+		http.StatusTemporaryRedirect,
+		http.StatusPermanentRedirect,
 	}
 
-	defaultRecoverHandlerResponse RecoverHandlerResponse = func(ctx *gin.Context, err any) Response {
-		if v, ok := err.(error); ok {
-			logger.Logrus().WithError(v).Errorln("Request catch exception path:", ctx.Request.URL, "panic:", err)
-		} else {
-			logger.Logrus().Errorln("Request catch exception path:", ctx.Request.URL, "panic:", err)
-		}
-		return RespRestException()
+	panicResolver PanicResolver = func(err error) string {
+		return err.Error()
 	}
 
-	httpCodeWithStatus map[int]StatusCode
+	badHttpCodeResolver BadHttpCodeResolver = func(httpStatusCode int, errMsg string) Response {
+
+		var statusMessage StatusMessage
+		if errMsg != "" {
+			statusMessage = StatusMessage(errMsg)
+		}
+
+		body := RestRespStruct{
+			Status: &RestRespStatusStruct{
+				Timestamp: time.Now().UnixMilli(),
+			},
+		}
+
+		var statusCode StatusCode
+		if v, ok := httpCodeWithStatus[httpStatusCode]; ok {
+			statusCode = v
+		} else {
+			statusCode = StatusCodeException
+		}
+
+		if statusMessage == "" {
+			body.Status.StatusMessage = GetStatusMessage(statusCode)
+		} else {
+			body.Status.StatusMessage = statusMessage
+		}
+		body.Status.StatusCode = statusCode
+
+		return NewRespRest().DataBuilder(func() *ResponseData {
+			bodyBytes, _ := ginStarter.ResponseDataStructDecoder.Decode(body)
+			return NewResponseDataWithStatusCode(gin.MIMEJSON, bodyBytes, http.StatusOK)
+		})
+	}
 )
 
-type HttpStatusCodeCodeHandlerResponse func(ctx *gin.Context, httpStatusCode int) Response
-type RecoverHandlerResponse func(ctx *gin.Context, err any) Response
+type PanicResolver func(err error) string
+type BadHttpCodeResolver func(httpStatusCode int, errMsg string) Response
 
 func init() {
 	httpCodeWithStatus = make(map[int]StatusCode, 7)
@@ -58,45 +80,131 @@ func init() {
 	httpCodeWithStatus[http.StatusUnauthorized] = StatusCodeForbidden
 }
 
+func isIgnoreHttpStatusCode(httpCode int) bool {
+	if !ginStarter.DisableDefaultIgnoreHttpCode {
+		for _, v := range defaultIgnoreHttpStatusCode {
+			if httpCode == v {
+				return true
+			}
+		}
+	}
+	if len(ginStarter.IgnoreHttpCode) > 0 {
+		for _, v := range ginStarter.IgnoreHttpCode {
+			if httpCode == v {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func panicToError(panicError any) (statusCode int, err error, internalError bool) {
+	switch t := panicError.(type) {
+	case string:
+		err = errors.New(t)
+	case error:
+		err = t
+	default:
+		// 内部特殊错误
+		if v, ok := t.(*internalPanic); ok {
+			rawError := v.rawError
+			statusCode = v.statusCode
+			if validationErrs, ok := rawError.(validator.ValidationErrors); ok {
+				internalError = true
+				err = errors.New(friendlyValidatorMessage(validationErrs))
+			} else if jsonErr, ok := rawError.(*json.UnmarshalTypeError); ok {
+				err = errors.New(jsonErr.Field + " type mismatch")
+			} else if _, ok := rawError.(*json.SyntaxError); ok {
+				err = errors.New("bad json payload")
+			} else {
+				err = rawError
+			}
+		} else {
+			err = fmt.Errorf("%v", t)
+		}
+	}
+	logger.Logrus().Errorf("panic: %v\n", err)
+	return
+}
+
 // recoverHandler 全局Panic处理中间件
 func recoverHandler() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
+		// panic异常处理
 		defer func() {
-			var err any
-			if r := recover(); r != nil {
-				err = r
-			} else {
-				if ctx.Err() != nil {
-					err = ctx.Err()
+			if panicError := recover(); panicError != nil {
+
+				var errMsg string
+				// 将panic异常进行转换
+				status, err, internalError := panicToError(panicError)
+				if ginStarter.HidePanicErrorDetails { // 禁用异常信息显示
+					if !internalError {
+						errMsg = ""
+						status = 500
+					}
+				} else {
+					errMsg = ginStarter.PanicResolver(err)
 				}
-			}
-			// 内部特殊错误
-			if v, ok := err.(*internalPanic); ok {
-				err = v.rawError
+
+				if status != 0 {
+					ctx.Status(status)
+				}
+
 				writer := ctx.Writer
-				ctx.Status(v.statusCode)
+				var statusCode int
+				var rewriter *responseRewriter
 				// 如果使用了可覆写中间件
 				if w, ok := writer.(*responseRewriter); ok {
-					httpResponse(ctx, defaultHttpStatusCodeHandlerResponse(ctx, v.statusCode))
-					w.ResponseWriter.WriteHeader(w.statusCode)
-					_, _ = w.ResponseWriter.Write(w.body.Bytes())
-					return
+					rewriter = w
+					statusCode = w.statusCode
+				} else {
+					statusCode = ctx.Writer.Status()
 				}
-			}
-			if err != nil {
-				response := defaultRecoverHandlerResponse(ctx, err)
-				if response != nil {
-					httpResponse(ctx, response)
-					writer := ctx.Writer
-					// 如果使用了可覆写中间件
-					if v, ok := writer.(*responseRewriter); ok {
-						v.ResponseWriter.WriteHeader(v.statusCode)
-						_, _ = v.ResponseWriter.Write(v.body.Bytes())
-					}
+
+				var response Response
+				if !ginStarter.DisableBadHttpCodeResolver {
+					response = ginStarter.BadHttpCodeResolver(statusCode, errMsg)
+				} else {
+					response = RespTextPlain(errMsg, statusCode)
+				}
+
+				httpResponse(ctx, response)
+				if rewriter != nil {
+					rewriter.ResponseWriter.WriteHeader(rewriter.statusCode)
+					_, _ = rewriter.ResponseWriter.Write(rewriter.body.Bytes())
 				}
 			}
 		}()
+
 		ctx.Next()
+
+		// 异常响应码处理
+		if !ginStarter.DisableBadHttpCodeResolver {
+			var statusCode int
+			var rewriter *responseRewriter
+			if v, ok := ctx.Writer.(*responseRewriter); ok {
+				rewriter = v
+				if v.statusCode != 0 && v.statusCode != http.StatusOK {
+					statusCode = v.statusCode
+				} else {
+					statusCode = v.ResponseWriter.Status()
+				}
+			} else {
+				statusCode = ctx.Writer.Status()
+			}
+			if statusCode != http.StatusOK {
+				if isIgnoreHttpStatusCode(statusCode) {
+					return
+				}
+				logger.Logrus().Warningln("Bad response path:", ctx.Request.URL, "status code:", statusCode)
+				response := ginStarter.BadHttpCodeResolver(statusCode, "")
+				httpResponse(ctx, response)
+				if rewriter != nil {
+					rewriter.ResponseWriter.WriteHeader(rewriter.statusCode)
+					_, _ = rewriter.ResponseWriter.Write(rewriter.body.Bytes())
+				}
+			}
+		}
 	}
 }
 
@@ -122,61 +230,42 @@ func responseRewriteHandler() gin.HandlerFunc {
 	}
 }
 
-// httpStatusCodeHandler 异常状态码自动转换响应中间件
-func httpStatusCodeHandler() gin.HandlerFunc {
-	return func(ctx *gin.Context) {
-		ctx.Next()
-		writer := ctx.Writer
-		var statusCode int
-		if v, ok := writer.(*responseRewriter); ok {
-			if v.statusCode != 0 && v.statusCode != http.StatusOK {
-				statusCode = v.statusCode
-			} else {
-				statusCode = v.ResponseWriter.Status()
-			}
-		}
-		if statusCode != http.StatusOK {
-			if isIgnoreHttpStatusCode(statusCode) {
-				return
-			}
-			if !isIgnoreHttpStatusCode(statusCode) {
-				logger.Logrus().Warningln("Bad response path:", ctx.Request.URL, "status code:", statusCode)
-			}
-			response := defaultHttpStatusCodeHandlerResponse(ctx, statusCode)
-			httpResponse(ctx, response)
-		}
-	}
-}
-
-func isIgnoreHttpStatusCode(httpCode int) bool {
-	if !disabledDefaultIgnoreHttpStatusCode {
-		for _, v := range defaultIgnoreHttpStatusCode {
-			if httpCode == v {
-				return true
-			}
-		}
-	}
-	if len(ignoreHttpStatusCode) > 0 {
-		for _, v := range ignoreHttpStatusCode {
-			if httpCode == v {
-				return true
-			}
-		}
-	}
-	return false
-}
-
 // 常用的一些中间件
 
 // BasicAuthMiddleware 基础权限校验中间件
-func BasicAuthMiddleware(account *BasicAuthAccount) Middleware {
+// match 满足指定条件才执行
+func BasicAuthMiddleware(account *BasicAuthAccount, match ...func(request *Request) bool) Middleware {
 	return func(request *Request) (Response, bool) {
+		if len(match) > 0 {
+			if !match[0](request) {
+				return nil, true
+			}
+		}
 		if request.GetHeader("Authorization") == "" {
 			return RespAbortWithHttpStatusCode(http.StatusUnauthorized), false
 		}
 		enc := "Basic " + base64.StdEncoding.EncodeToString(conversion.ParseBytes(account.Username+":"+account.Password))
 		if request.GetHeader("Authorization") != enc {
 			return RespAbortWithHttpStatusCode(http.StatusUnauthorized), false
+		}
+		return nil, true
+	}
+}
+
+// MediaTypeMiddleware 类型校验中间件
+func MediaTypeMiddleware(contentType []string, match ...func(request *Request) bool) Middleware {
+	return func(request *Request) (Response, bool) {
+		if len(match) > 0 {
+			if !match[0](request) {
+				return nil, true
+			}
+		}
+		if len(contentType) > 0 {
+			if !slice.Contains(contentType, request.GetHeader("Content-Type")) {
+				return RespAbortWithHttpStatusCode(http.StatusUnsupportedMediaType), false
+			}
+		} else {
+			logger.Logrus().Warningln("valid Content-Type restriction not set")
 		}
 		return nil, true
 	}

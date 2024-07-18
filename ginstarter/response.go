@@ -8,9 +8,6 @@ import (
 	"time"
 )
 
-// 默认结构体数据解码为[]byte的处理器 json
-var defaultResponseDataDecoder ResponseDataStructDecoder = responseJsonDataStructDecoder{}
-
 // Response 标准响应 用户可以通过自定义实现该接口定义自己的响应结构体
 // 也可以使用NewRespRest来创建自定义响应结构体
 type Response interface {
@@ -52,14 +49,14 @@ func NewRespRest() *restResp {
 }
 
 // DataBuilder 响应数据构造器
-func (r *restResp) DataBuilder(fn func(data *ResponseData)) Response {
-	fn(r.responseData)
+func (r *restResp) DataBuilder(fn func() *ResponseData) Response {
+	r.responseData = fn()
 	return r
 }
 
 // SetData 设置Rest标准的响应结构
 func (r *restResp) SetData(data any) *ResponseData {
-	bytes, err := defaultResponseDataDecoder.Decode(data)
+	bytes, err := ginStarter.ResponseDataStructDecoder.Decode(data)
 	if err != nil {
 		panic(err)
 	}
@@ -69,7 +66,7 @@ func (r *restResp) SetData(data any) *ResponseData {
 
 // SetDataResponse 设置Rest标准的响应结构 并返回响应体数据
 func (r *restResp) SetDataResponse(data any) Response {
-	bytes, err := defaultResponseDataDecoder.Decode(data)
+	bytes, err := ginStarter.ResponseDataStructDecoder.Decode(data)
 	if err != nil {
 		panic(err)
 	}
@@ -117,7 +114,7 @@ func RespRestStatusError(statusCode StatusCode, statusMessage ...StatusMessage) 
 			Timestamp:  time.Now().UnixMilli(),
 		},
 	}
-	if len(statusMessage) > 0 {
+	if len(statusMessage) > 0 && statusMessage[0] != "" {
 		dataRest.Status.StatusMessage = statusMessage[0]
 	} else {
 		dataRest.Status.StatusMessage = GetStatusMessage(statusCode)

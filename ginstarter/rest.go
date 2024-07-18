@@ -1,37 +1,36 @@
 package ginstarter
 
+import "net/http"
+
 type StatusCode int
 type StatusMessage string
 type BizErrorCode int
 type BizErrorMessage string
 
 const (
-	// StatusCodeSuccess 请求成功
-	StatusCodeSuccess            = 200
-	StatusCodeServiceUnavailable = 10000 - iota
-	StatusCodeExceededLimit
-	StatusCodeTimeout
-	StatusCodeException
-	StatusCodeNotFound
-	StatusCodeForbidden
-	StatusCodeAuthorityUnavailable
+	StatusCodeSuccess            = http.StatusOK
+	StatusCodeServiceUnavailable = http.StatusServiceUnavailable
+	StatusCodeExceededLimit      = http.StatusTooManyRequests
+	StatusCodeTimeout            = http.StatusGatewayTimeout
+	StatusCodeException          = http.StatusInternalServerError
+	StatusCodeNotFound           = http.StatusNotFound
+	StatusCodeForbidden          = http.StatusForbidden
 
-	StatusCodeMethodNotAllowed = 9007 - iota
-	StatusCodeMediaTypeNotAllowed
-	StatusCodeUploadLimitExceeded
-	StatusCodeUnauthorized
-	StatusCodeBadRequestParameters
+	StatusCodeMethodNotAllowed     = http.StatusMethodNotAllowed
+	StatusCodeMediaTypeNotAllowed  = http.StatusUnsupportedMediaType
+	StatusCodeUploadLimitExceeded  = http.StatusRequestEntityTooLarge
+	StatusCodeUnauthorized         = http.StatusUnauthorized
+	StatusCodeBadRequestParameters = http.StatusBadRequest
 )
 
 const (
-	statusMessageSuccess              = "Request Success"
-	statusMessageServiceUnavailable   = "Service Unavailable"
-	statusMessageExceededLimit        = "Request Exceeded Limit"
-	statusMessageTimeout              = "Service Timeout"
-	statusMessageException            = "System Error"
-	statusMessageNotFound             = "Request Not Found"
-	statusMessageForbidden            = "Request Forbidden"
-	statusMessageAuthorityUnavailable = "Authority Service Unavailable"
+	statusMessageSuccess            = "Request Success"
+	statusMessageServiceUnavailable = "Service Unavailable"
+	statusMessageExceededLimit      = "Request Exceeded Limit"
+	statusMessageTimeout            = "Service Timeout"
+	statusMessageException          = "System Error"
+	statusMessageNotFound           = "Request Not Found"
+	statusMessageForbidden          = "Request Forbidden"
 
 	statusMessageMethodNotAllowed     = "Request Method Not Allowed"
 	statusMessageMediaTypeNotAllowed  = "Request Media Type Not Allowed"
@@ -47,7 +46,6 @@ var statusCodeWithMessage = map[StatusCode]StatusMessage{
 	StatusCodeException:            statusMessageException,
 	StatusCodeNotFound:             statusMessageNotFound,
 	StatusCodeForbidden:            statusMessageForbidden,
-	StatusCodeAuthorityUnavailable: statusMessageAuthorityUnavailable,
 	StatusCodeMethodNotAllowed:     statusMessageMethodNotAllowed,
 	StatusCodeMediaTypeNotAllowed:  statusMessageMediaTypeNotAllowed,
 	StatusCodeUploadLimitExceeded:  statusMessageUploadLimitExceeded,

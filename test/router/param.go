@@ -15,6 +15,8 @@ func (d *ParamRouter) Info() *ginstarter.RouterInfo {
 }
 
 func (d *ParamRouter) Handlers(router *ginstarter.RouterWrapper) {
+
+	router.POST1("json", []string{"application-json"}, d.json())
 	// demo path /param/uri-path/101/acexy
 	router.GET("uri-path/:id/:name", d.path())
 	// demo path /param/uri-path/query?id=1&name=acexy
@@ -36,13 +38,17 @@ type UriQueryUser struct {
 }
 
 type BodyJsonUser struct {
-	Id   uint   `json:"id"`
+	Id   uint   `json:"id" binding:"required,numeric"`
 	Name string `json:"name" binding:"required"`
+	Age  uint   `json:"age"`
+	Fat  bool   `json:"fat"`
 }
 
 type BodyFormUser struct {
-	Id   uint   `form:"id"`
-	Name string `form:"name" binding:"required"`
+	Id     uint   `form:"id" binding:"required,min=10"`
+	Name   string `form:"name" binding:"required"`
+	Email  string `form:"email" binding:"required,email"`
+	Domain string `form:"domain" binding:"domain"`
 }
 
 func (d *ParamRouter) path() ginstarter.HandlerWrapper {
@@ -72,7 +78,7 @@ func (d *ParamRouter) query() ginstarter.HandlerWrapper {
 func (d *ParamRouter) json() ginstarter.HandlerWrapper {
 	return func(request *ginstarter.Request) (ginstarter.Response, error) {
 		user := BodyJsonUser{}
-		request.BindBodyJson(&user)
+		request.MustBindBodyJson(&user)
 		fmt.Printf("%+v\n", user)
 		return ginstarter.RespRestSuccess(), nil
 	}
@@ -81,7 +87,7 @@ func (d *ParamRouter) json() ginstarter.HandlerWrapper {
 func (d *ParamRouter) form() ginstarter.HandlerWrapper {
 	return func(request *ginstarter.Request) (ginstarter.Response, error) {
 		user := BodyFormUser{}
-		request.BindBodyForm(&user)
+		request.MustBindBodyForm(&user)
 		fmt.Printf("%+v\n", user)
 		return ginstarter.RespRestSuccess(), nil
 	}
