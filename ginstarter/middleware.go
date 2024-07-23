@@ -141,6 +141,8 @@ func recoverHandler() gin.HandlerFunc {
 					if !internalError {
 						errMsg = ""
 						status = 500
+					} else {
+						errMsg = err.Error()
 					}
 				} else {
 					errMsg = ginStarter.PanicResolver(err)
