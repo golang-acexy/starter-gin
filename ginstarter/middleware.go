@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"github.com/acexy/golang-toolkit/logger"
 	"github.com/acexy/golang-toolkit/math/conversion"
-	"github.com/acexy/golang-toolkit/util/slice"
+	coll "github.com/acexy/golang-toolkit/util/coll"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"net/http"
@@ -263,7 +263,7 @@ func MediaTypeMiddleware(contentType []string, match ...func(request *Request) b
 			}
 		}
 		if len(contentType) > 0 {
-			if !slice.Contains(contentType, request.GetHeader("Content-Type")) {
+			if !coll.SliceContains(contentType, request.GetHeader("Content-Type")) {
 				return RespAbortWithHttpStatusCode(http.StatusUnsupportedMediaType), false
 			}
 		} else {

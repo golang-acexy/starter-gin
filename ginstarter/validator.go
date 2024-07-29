@@ -1,7 +1,7 @@
 package ginstarter
 
 import (
-	"github.com/acexy/golang-toolkit/util/slice"
+	"github.com/acexy/golang-toolkit/util/coll"
 	"github.com/acexy/golang-toolkit/util/str"
 	"github.com/gin-gonic/gin/binding"
 	"github.com/go-playground/validator/v10"
@@ -38,7 +38,7 @@ func friendlyValidatorMessage(errors validator.ValidationErrors) string {
 		builder.WriteString(str.LowFirstChar(vErr.Field()))
 		// 验证标签
 		tag := vErr.Tag()
-		if slice.Contains(typeDesc, tag) {
+		if coll.SliceContains(typeDesc, tag) {
 			builder.WriteString(" mismatch type ").WriteString(tag)
 		} else {
 			builder.WriteString(" ").WriteString(tag)

@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"github.com/acexy/golang-toolkit/logger"
-	"github.com/acexy/golang-toolkit/util/slice"
+	"github.com/acexy/golang-toolkit/util/coll"
 	"github.com/gin-gonic/gin"
 	"net/http"
 )
@@ -114,7 +114,7 @@ func (r *RouterWrapper) handler(methods []string, path string, contentType []str
 			}
 
 			if len(contentType) > 0 {
-				if !slice.Contains(contentType, context.GetHeader("Content-Type")) {
+				if !coll.SliceContains(contentType, context.GetHeader("Content-Type")) {
 					panic(&internalPanic{
 						statusCode: http.StatusUnsupportedMediaType,
 						rawError:   errors.New(statusMessageMediaTypeNotAllowed),
