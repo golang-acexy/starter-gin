@@ -293,11 +293,17 @@ func (r *ResponseData) AddHeaders(headers []*ResponseHeader) *ResponseData {
 	return r
 }
 
-func (r *ResponseData) AddHeader(header *ResponseHeader) *ResponseData {
+func (r *ResponseData) AddHeader(name, value string) *ResponseData {
 	if len(r.headers) == 0 {
-		r.headers = []*ResponseHeader{header}
+		r.headers = []*ResponseHeader{{
+			name:  name,
+			value: value,
+		}}
 	} else {
-		r.headers = append(r.headers, header)
+		r.headers = append(r.headers, &ResponseHeader{
+			name:  name,
+			value: value,
+		})
 	}
 	return r
 }
