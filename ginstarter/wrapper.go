@@ -4,10 +4,8 @@ import (
 	"bytes"
 	"errors"
 	"github.com/acexy/golang-toolkit/logger"
-	"github.com/acexy/golang-toolkit/util/coll"
 	"github.com/gin-gonic/gin"
 	"net/http"
-	"strings"
 )
 
 type BasicAuthAccount struct {
@@ -115,9 +113,7 @@ func (r *RouterWrapper) handler(methods []string, path string, contentType []str
 			}
 
 			if len(contentType) > 0 {
-				if !coll.SliceContains(contentType, strings.TrimSpace(strings.Split(context.GetHeader("Content-Type"), ";")[0]), func(s1 *string, s2 *string) bool {
-					return strings.ToLower(*s1) == strings.ToLower(*s2)
-				}) {
+				if !isMatchMediaType(contentType, context.ContentType()) {
 					panic(&internalPanic{
 						statusCode: http.StatusUnsupportedMediaType,
 						rawError:   errors.New(statusMessageMediaTypeNotAllowed),

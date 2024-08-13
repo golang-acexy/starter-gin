@@ -264,9 +264,7 @@ func MediaTypeMiddleware(contentType []string, match ...func(request *Request) b
 			}
 		}
 		if len(contentType) > 0 {
-			if !coll.SliceContains(contentType, strings.TrimSpace(strings.Split(request.GetHeader("Content-Type"), ";")[0]), func(s1 *string, s2 *string) bool {
-				return strings.ToLower(*s1) == strings.ToLower(*s2)
-			}) {
+			if !isMatchMediaType(contentType, request.GetHeader("Content-Type")) {
 				return RespAbortWithHttpStatusCode(http.StatusUnsupportedMediaType), false
 			}
 		} else {
@@ -274,4 +272,10 @@ func MediaTypeMiddleware(contentType []string, match ...func(request *Request) b
 		}
 		return nil, true
 	}
+}
+
+func isMatchMediaType(allowContentType []string, contentType string) bool {
+	return coll.SliceContains(allowContentType, strings.TrimSpace(strings.Split(contentType, ";")[0]), func(s1 *string, s2 *string) bool {
+		return strings.ToLower(*s1) == strings.ToLower(*s2)
+	})
 }
