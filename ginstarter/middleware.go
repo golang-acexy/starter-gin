@@ -12,6 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -263,7 +264,9 @@ func MediaTypeMiddleware(contentType []string, match ...func(request *Request) b
 			}
 		}
 		if len(contentType) > 0 {
-			if !coll.SliceContains(contentType, request.GetHeader("Content-Type")) {
+			if !coll.SliceContains(contentType, strings.TrimSpace(strings.Split(request.GetHeader("Content-Type"), ";")[0]), func(s1 *string, s2 *string) bool {
+				return strings.ToLower(*s1) == strings.ToLower(*s2)
+			}) {
 				return RespAbortWithHttpStatusCode(http.StatusUnsupportedMediaType), false
 			}
 		} else {
