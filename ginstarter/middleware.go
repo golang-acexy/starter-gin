@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"github.com/acexy/golang-toolkit/logger"
 	"github.com/acexy/golang-toolkit/math/conversion"
-	coll "github.com/acexy/golang-toolkit/util/coll"
+	"github.com/acexy/golang-toolkit/util/coll"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"net/http"
@@ -274,8 +274,8 @@ func MediaTypeMiddleware(contentType []string, match ...func(request *Request) b
 	}
 }
 
-func isMatchMediaType(allowContentType []string, contentType string) bool {
-	return coll.SliceContains(allowContentType, strings.TrimSpace(strings.Split(contentType, ";")[0]), func(s1 *string, s2 *string) bool {
+func isMatchMediaType(allowContentType []string, requestContentType string) bool {
+	return coll.SliceContains(allowContentType, strings.TrimSpace(strings.Split(requestContentType, ";")[0]), func(s1 *string, s2 *string) bool {
 		return strings.ToLower(*s1) == strings.ToLower(*s2)
 	})
 }
