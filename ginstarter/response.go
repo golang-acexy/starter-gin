@@ -95,13 +95,33 @@ func RespRestSuccess(data ...any) Response {
 }
 
 // RespRestException 响应标准格式的Rest系统异常错误
-func RespRestException() Response {
+func RespRestException(statusMessage ...string) Response {
+	status := &RestRespStatusStruct{
+		StatusCode:    StatusCodeException,
+		StatusMessage: statusMessageException,
+		Timestamp:     time.Now().UnixMilli(),
+	}
+	if len(statusMessage) > 0 {
+		status.StatusMessage = StatusMessage(statusMessage[0])
+	}
 	dataRest := &RestRespStruct{
-		Status: &RestRespStatusStruct{
-			StatusCode:    StatusCodeException,
-			StatusMessage: statusMessageException,
-			Timestamp:     time.Now().UnixMilli(),
-		},
+		Status: status,
+	}
+	return NewRespRest().SetDataResponse(dataRest)
+}
+
+// RespRestBadParameters 响应标准格式的Rest参数错误
+func RespRestBadParameters(statusMessage ...string) Response {
+	status := &RestRespStatusStruct{
+		StatusCode:    StatusCodeBadRequestParameters,
+		StatusMessage: statusMessageBadRequestParameters,
+		Timestamp:     time.Now().UnixMilli(),
+	}
+	if len(statusMessage) > 0 {
+		status.StatusMessage = StatusMessage(statusMessage[0])
+	}
+	dataRest := &RestRespStruct{
+		Status: status,
 	}
 	return NewRespRest().SetDataResponse(dataRest)
 }
