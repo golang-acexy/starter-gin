@@ -78,7 +78,7 @@ func init() {
 	httpCodeWithStatus[http.StatusMethodNotAllowed] = StatusCodeMethodNotAllowed
 	httpCodeWithStatus[http.StatusUnsupportedMediaType] = StatusCodeMediaTypeNotAllowed
 	httpCodeWithStatus[http.StatusRequestEntityTooLarge] = StatusCodeUploadLimitExceeded
-	httpCodeWithStatus[http.StatusUnauthorized] = StatusCodeForbidden
+	httpCodeWithStatus[http.StatusUnauthorized] = StatusCodeUnauthorized
 }
 
 func isIgnoreHttpStatusCode(httpCode int) bool {
