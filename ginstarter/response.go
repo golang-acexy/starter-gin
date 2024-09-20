@@ -143,13 +143,13 @@ func RespRestStatusError(statusCode StatusCode, statusMessage ...StatusMessage) 
 }
 
 // RespRestBizError 响应标准格式的Rest业务错误
-func RespRestBizError(bizErrorCode *BizErrorCode, bizErrorMessage *BizErrorMessage) Response {
+func RespRestBizError(bizErrorCode BizErrorCode, bizErrorMessage BizErrorMessage) Response {
 	dataRest := &RestRespStruct{
 		Status: &RestRespStatusStruct{
 			StatusCode:      StatusCodeSuccess,
 			StatusMessage:   statusMessageSuccess,
-			BizErrorCode:    bizErrorCode,
-			BizErrorMessage: bizErrorMessage,
+			BizErrorCode:    &bizErrorCode,
+			BizErrorMessage: &bizErrorMessage,
 			Timestamp:       time.Now().UnixMilli(),
 		},
 	}
