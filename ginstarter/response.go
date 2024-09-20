@@ -126,6 +126,22 @@ func RespRestBadParameters(statusMessage ...string) Response {
 	return NewRespRest().SetDataResponse(dataRest)
 }
 
+// RespRestUnAuthorized 响应标准格式的Rest未授权错误
+func RespRestUnAuthorized(statusMessage ...string) Response {
+	status := &RestRespStatusStruct{
+		StatusCode:    StatusCodeUnauthorized,
+		StatusMessage: statusMessageUnauthorized,
+		Timestamp:     time.Now().UnixMilli(),
+	}
+	if len(statusMessage) > 0 {
+		status.StatusMessage = StatusMessage(statusMessage[0])
+	}
+	dataRest := &RestRespStruct{
+		Status: status,
+	}
+	return NewRespRest().SetDataResponse(dataRest)
+}
+
 // RespRestStatusError 响应标准格式的Rest状态错误
 func RespRestStatusError(statusCode StatusCode, statusMessage ...StatusMessage) Response {
 	dataRest := &RestRespStruct{
