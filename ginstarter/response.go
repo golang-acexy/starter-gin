@@ -95,13 +95,49 @@ func RespRestSuccess(data ...any) Response {
 }
 
 // RespRestException 响应标准格式的Rest系统异常错误
-func RespRestException() Response {
+func RespRestException(statusMessage ...string) Response {
+	status := &RestRespStatusStruct{
+		StatusCode:    StatusCodeException,
+		StatusMessage: statusMessageException,
+		Timestamp:     time.Now().UnixMilli(),
+	}
+	if len(statusMessage) > 0 {
+		status.StatusMessage = StatusMessage(statusMessage[0])
+	}
 	dataRest := &RestRespStruct{
-		Status: &RestRespStatusStruct{
-			StatusCode:    StatusCodeException,
-			StatusMessage: statusMessageException,
-			Timestamp:     time.Now().UnixMilli(),
-		},
+		Status: status,
+	}
+	return NewRespRest().SetDataResponse(dataRest)
+}
+
+// RespRestBadParameters 响应标准格式的Rest参数错误
+func RespRestBadParameters(statusMessage ...string) Response {
+	status := &RestRespStatusStruct{
+		StatusCode:    StatusCodeBadRequestParameters,
+		StatusMessage: statusMessageBadRequestParameters,
+		Timestamp:     time.Now().UnixMilli(),
+	}
+	if len(statusMessage) > 0 {
+		status.StatusMessage = StatusMessage(statusMessage[0])
+	}
+	dataRest := &RestRespStruct{
+		Status: status,
+	}
+	return NewRespRest().SetDataResponse(dataRest)
+}
+
+// RespRestUnAuthorized 响应标准格式的Rest未授权错误
+func RespRestUnAuthorized(statusMessage ...string) Response {
+	status := &RestRespStatusStruct{
+		StatusCode:    StatusCodeUnauthorized,
+		StatusMessage: statusMessageUnauthorized,
+		Timestamp:     time.Now().UnixMilli(),
+	}
+	if len(statusMessage) > 0 {
+		status.StatusMessage = StatusMessage(statusMessage[0])
+	}
+	dataRest := &RestRespStruct{
+		Status: status,
 	}
 	return NewRespRest().SetDataResponse(dataRest)
 }
@@ -123,13 +159,13 @@ func RespRestStatusError(statusCode StatusCode, statusMessage ...StatusMessage) 
 }
 
 // RespRestBizError 响应标准格式的Rest业务错误
-func RespRestBizError(bizErrorCode *BizErrorCode, bizErrorMessage *BizErrorMessage) Response {
+func RespRestBizError(bizErrorCode BizErrorCode, bizErrorMessage BizErrorMessage) Response {
 	dataRest := &RestRespStruct{
 		Status: &RestRespStatusStruct{
 			StatusCode:      StatusCodeSuccess,
 			StatusMessage:   statusMessageSuccess,
-			BizErrorCode:    bizErrorCode,
-			BizErrorMessage: bizErrorMessage,
+			BizErrorCode:    &bizErrorCode,
+			BizErrorMessage: &bizErrorMessage,
 			Timestamp:       time.Now().UnixMilli(),
 		},
 	}
