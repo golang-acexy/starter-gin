@@ -317,3 +317,13 @@ func (r *Request) MustGetCookie(name string) string {
 	}
 	return v
 }
+
+// SetValue 向gin上下文绑定数据
+func (r *Request) SetValue(key string, value interface{}) {
+	r.ctx.Set(key, value)
+}
+
+// GetValue 从gin上下文获取数据
+func (r *Request) GetValue(key string) (interface{}, bool) {
+	return r.ctx.Get(key)
+}
