@@ -1,8 +1,8 @@
 # starter-gin
 
-``
+```
 go get github.com/golang-acexy/starter-gin
-``
+```
 
 基于`github.com/gin-gonic/gin`封装的http服务组件
 
