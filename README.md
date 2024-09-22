@@ -1,11 +1,11 @@
 # starter-gin
 
-基于`github.com/gin-gonic/gin`封装的http服务组件
-
-使用
 ``
 go get github.com/golang-acexy/starter-gin
 ``
+
+基于`github.com/gin-gonic/gin`封装的http服务组件
+
 ---
 
 #### 功能说明
