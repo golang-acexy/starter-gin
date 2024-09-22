@@ -69,8 +69,8 @@ go get github.com/golang-acexy/starter-gin
     // HttpMethod 获取请求方法
     HttpMethod() string
     
-    // FullPath 获取请求全路径
-    FullPath() string
+    // RequestPath 获取请求全路径
+    RequestPath() string
     
     // RawGinContext 获取原始Gin上下文
     RawGinContext() *gin.Context
