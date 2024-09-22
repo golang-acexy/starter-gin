@@ -54,11 +54,11 @@ go get github.com/golang-acexy/starter-gin
 
   ```go
   type RouterInfo struct {
-  // GroupPath 路由分组路径
-  GroupPath string
+    // GroupPath 路由分组路径
+    GroupPath string
   
-  // 该Router下的中间件执行器
-  Middlewares []Middleware
+    // 该Router下的中间件执行器
+    Middlewares []Middleware
   }
   ```
 
