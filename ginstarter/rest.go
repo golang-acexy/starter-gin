@@ -86,7 +86,7 @@ type RestRespStruct struct {
 }
 
 // NewRestSuccess 响应标准成功Rest结构体
-func NewRestSuccess(data ...interface{}) RestRespStruct {
+func NewRestSuccess(data ...interface{}) *RestRespStruct {
 	result := RestRespStruct{
 		Status: &RestRespStatusStruct{
 			StatusCode:    StatusCodeSuccess,
@@ -97,11 +97,11 @@ func NewRestSuccess(data ...interface{}) RestRespStruct {
 	if len(data) > 0 {
 		result.Data = data[0]
 	}
-	return result
+	return &result
 }
 
 // NewRestException 响应标准异常Rest结构体
-func NewRestException(statusMessage ...string) RestRespStruct {
+func NewRestException(statusMessage ...string) *RestRespStruct {
 	status := &RestRespStatusStruct{
 		StatusCode:    StatusCodeException,
 		StatusMessage: statusMessageException,
@@ -110,13 +110,13 @@ func NewRestException(statusMessage ...string) RestRespStruct {
 	if len(statusMessage) > 0 {
 		status.StatusMessage = StatusMessage(statusMessage[0])
 	}
-	return RestRespStruct{
+	return &RestRespStruct{
 		Status: status,
 	}
 }
 
 // NewRestBadBadParameters 响应标准参数错误Rest结构体
-func NewRestBadBadParameters(statusMessage ...string) RestRespStruct {
+func NewRestBadBadParameters(statusMessage ...string) *RestRespStruct {
 	status := &RestRespStatusStruct{
 		StatusCode:    StatusCodeBadRequestParameters,
 		StatusMessage: statusMessageBadRequestParameters,
@@ -125,13 +125,13 @@ func NewRestBadBadParameters(statusMessage ...string) RestRespStruct {
 	if len(statusMessage) > 0 {
 		status.StatusMessage = StatusMessage(statusMessage[0])
 	}
-	return RestRespStruct{
+	return &RestRespStruct{
 		Status: status,
 	}
 }
 
 // NewRestUnauthorized 响应标准未授权Rest结构体
-func NewRestUnauthorized(statusMessage ...string) RestRespStruct {
+func NewRestUnauthorized(statusMessage ...string) *RestRespStruct {
 	status := &RestRespStatusStruct{
 		StatusCode:    StatusCodeUnauthorized,
 		StatusMessage: statusMessageUnauthorized,
@@ -140,13 +140,13 @@ func NewRestUnauthorized(statusMessage ...string) RestRespStruct {
 	if len(statusMessage) > 0 {
 		status.StatusMessage = StatusMessage(statusMessage[0])
 	}
-	return RestRespStruct{
+	return &RestRespStruct{
 		Status: status,
 	}
 }
 
 // NewRestStatusError 响应标准错误Rest结构体
-func NewRestStatusError(statusCode StatusCode, statusMessage ...StatusMessage) RestRespStruct {
+func NewRestStatusError(statusCode StatusCode, statusMessage ...StatusMessage) *RestRespStruct {
 	dataRest := RestRespStruct{
 		Status: &RestRespStatusStruct{
 			StatusCode: statusCode,
@@ -158,11 +158,11 @@ func NewRestStatusError(statusCode StatusCode, statusMessage ...StatusMessage) R
 	} else {
 		dataRest.Status.StatusMessage = GetStatusMessage(statusCode)
 	}
-	return dataRest
+	return &dataRest
 }
 
 // NewRestBizError 响应标准业务错误Rest结构体
-func NewRestBizError(bizErrorCode BizErrorCode, bizErrorMessage BizErrorMessage) RestRespStruct {
+func NewRestBizError(bizErrorCode BizErrorCode, bizErrorMessage BizErrorMessage) *RestRespStruct {
 	dataRest := RestRespStruct{
 		Status: &RestRespStatusStruct{
 			StatusCode:      StatusCodeSuccess,
@@ -172,5 +172,5 @@ func NewRestBizError(bizErrorCode BizErrorCode, bizErrorMessage BizErrorMessage)
 			Timestamp:       time.Now().UnixMilli(),
 		},
 	}
-	return dataRest
+	return &dataRest
 }
