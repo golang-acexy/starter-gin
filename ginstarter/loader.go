@@ -30,8 +30,8 @@ type GinStarter struct {
 	ListenAddress string // ip:port
 
 	// 默认情况系统会将捕获的异常详细发给PanicResolver处理，如果不想将细节暴露向外
-	// 1. 禁用细节，系统将在触发panic重要错误时不在调用PanicResolver处理，并统一响应500错误
-	// 2. 如果不想禁用异常时调度PanicResolver, 可以在初始化时手动设置自定义PanicResolver处理器
+	// 方案 1. 启用隐藏异常细节功能，系统将在触发panic重要错误时不再调用PanicResolver处理，并统一响应500错误
+	// 方案 2. 如果不想禁用异常时调度PanicResolver, 可以在初始化时手动设置自定义PanicResolver处理器
 	// * panic 将被分为框架内部错误和框架未知错误 框架内部错误是非敏感错误，不受该参数控制，每次触发PanicResolver，例如验证框架错误
 	HidePanicErrorDetails bool
 	// 全局异常响应处理器 如果不指定则使用默认方式
@@ -61,7 +61,7 @@ type GinStarter struct {
 	// 关闭包裹405错误展示，使用404代替
 	DisableMethodNotAllowedError bool
 
-	// 禁用尝试获取真实IP
+	// 禁用尝试获取转发真实IP
 	DisableForwardedByClientIP bool
 }
 
