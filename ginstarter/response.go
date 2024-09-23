@@ -78,8 +78,8 @@ func (r *restResp) ToResponse() Response {
 	return r
 }
 
-// RestRestRaw 响应标准格式的Rest原始数据
-func RestRestRaw(dataRest RestRespStruct) Response {
+// RespRestRaw 响应标准格式的Rest原始数据
+func RespRestRaw(dataRest RestRespStruct) Response {
 	return NewRespRest().SetDataResponse(&dataRest)
 }
 
