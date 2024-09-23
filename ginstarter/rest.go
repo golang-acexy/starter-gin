@@ -1,6 +1,9 @@
 package ginstarter
 
-import "net/http"
+import (
+	"net/http"
+	"time"
+)
 
 type StatusCode int
 type StatusMessage string
@@ -80,4 +83,94 @@ type RestRespStruct struct {
 
 	// 仅当StatusCode为200 无业务错误码BizErrorCode 响应成功数据
 	Data any `json:"data"`
+}
+
+// NewRestSuccess 响应标准成功Rest结构体
+func NewRestSuccess(data ...interface{}) RestRespStruct {
+	result := RestRespStruct{
+		Status: &RestRespStatusStruct{
+			StatusCode:    StatusCodeSuccess,
+			StatusMessage: statusMessageSuccess,
+			Timestamp:     time.Now().UnixMilli(),
+		},
+	}
+	if len(data) > 0 {
+		result.Data = data[0]
+	}
+	return result
+}
+
+// NewRestException 响应标准异常Rest结构体
+func NewRestException(statusMessage ...string) RestRespStruct {
+	status := &RestRespStatusStruct{
+		StatusCode:    StatusCodeException,
+		StatusMessage: statusMessageException,
+		Timestamp:     time.Now().UnixMilli(),
+	}
+	if len(statusMessage) > 0 {
+		status.StatusMessage = StatusMessage(statusMessage[0])
+	}
+	return RestRespStruct{
+		Status: status,
+	}
+}
+
+// NewRestBadBadParameters 响应标准参数错误Rest结构体
+func NewRestBadBadParameters(statusMessage ...string) RestRespStruct {
+	status := &RestRespStatusStruct{
+		StatusCode:    StatusCodeBadRequestParameters,
+		StatusMessage: statusMessageBadRequestParameters,
+		Timestamp:     time.Now().UnixMilli(),
+	}
+	if len(statusMessage) > 0 {
+		status.StatusMessage = StatusMessage(statusMessage[0])
+	}
+	return RestRespStruct{
+		Status: status,
+	}
+}
+
+// NewRestUnauthorized 响应标准未授权Rest结构体
+func NewRestUnauthorized(statusMessage ...string) RestRespStruct {
+	status := &RestRespStatusStruct{
+		StatusCode:    StatusCodeUnauthorized,
+		StatusMessage: statusMessageUnauthorized,
+		Timestamp:     time.Now().UnixMilli(),
+	}
+	if len(statusMessage) > 0 {
+		status.StatusMessage = StatusMessage(statusMessage[0])
+	}
+	return RestRespStruct{
+		Status: status,
+	}
+}
+
+// NewRestStatusError 响应标准错误Rest结构体
+func NewRestStatusError(statusCode StatusCode, statusMessage ...StatusMessage) RestRespStruct {
+	dataRest := RestRespStruct{
+		Status: &RestRespStatusStruct{
+			StatusCode: statusCode,
+			Timestamp:  time.Now().UnixMilli(),
+		},
+	}
+	if len(statusMessage) > 0 && statusMessage[0] != "" {
+		dataRest.Status.StatusMessage = statusMessage[0]
+	} else {
+		dataRest.Status.StatusMessage = GetStatusMessage(statusCode)
+	}
+	return dataRest
+}
+
+// NewRestBizError 响应标准业务错误Rest结构体
+func NewRestBizError(bizErrorCode BizErrorCode, bizErrorMessage BizErrorMessage) RestRespStruct {
+	dataRest := RestRespStruct{
+		Status: &RestRespStatusStruct{
+			StatusCode:      StatusCodeSuccess,
+			StatusMessage:   statusMessageSuccess,
+			BizErrorCode:    &bizErrorCode,
+			BizErrorMessage: &bizErrorMessage,
+			Timestamp:       time.Now().UnixMilli(),
+		},
+	}
+	return dataRest
 }
