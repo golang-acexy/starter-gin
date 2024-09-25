@@ -5,15 +5,15 @@ go 1.21.0
 toolchain go1.21.5
 
 require (
-	github.com/acexy/golang-toolkit v0.0.24
+	github.com/acexy/golang-toolkit v0.0.25
 	github.com/gin-gonic/gin v1.10.0
 	github.com/go-playground/validator/v10 v10.22.1
-	github.com/golang-acexy/starter-parent v0.1.6
+	github.com/golang-acexy/starter-parent v0.1.7
 	github.com/sirupsen/logrus v1.9.3
 )
 
 require (
-	github.com/bytedance/sonic v1.12.2 // indirect
+	github.com/bytedance/sonic v1.12.3 // indirect
 	github.com/bytedance/sonic/loader v0.2.0 // indirect
 	github.com/cloudwego/base64x v0.1.4 // indirect
 	github.com/cloudwego/iasm v0.2.0 // indirect
