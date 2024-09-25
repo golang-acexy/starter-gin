@@ -2,6 +2,7 @@ package ginstarter
 
 import (
 	"errors"
+	"github.com/acexy/golang-toolkit/math/conversion"
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
 	"mime/multipart"
@@ -248,6 +249,12 @@ func (r *Request) MustGetRawBodyData() []byte {
 		})
 	}
 	return v
+}
+
+// MustGetRawBodyString 将请求body以字符串返回
+// 任何错误将触发Panic流程中断
+func (r *Request) MustGetRawBodyString() string {
+	return conversion.FromBytes(r.MustGetRawBodyData())
 }
 
 // GetFormFile 获取上传文件内容

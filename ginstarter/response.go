@@ -5,7 +5,6 @@ import (
 	"github.com/acexy/golang-toolkit/util/json"
 	"github.com/gin-gonic/gin"
 	"net/http"
-	"time"
 )
 
 // Response 标准响应 用户可以通过自定义实现该接口定义自己的响应结构体
@@ -79,97 +78,39 @@ func (r *restResp) ToResponse() Response {
 	return r
 }
 
+// RespRestRaw 响应标准格式的Rest原始数据
+func RespRestRaw(dataRest *RestRespStruct) Response {
+	return NewRespRest().SetDataResponse(dataRest)
+}
+
 // RespRestSuccess 响应标准格式的Rest成功数据
 func RespRestSuccess(data ...any) Response {
-	dataRest := &RestRespStruct{
-		Status: &RestRespStatusStruct{
-			StatusCode:    StatusCodeSuccess,
-			StatusMessage: statusMessageSuccess,
-			Timestamp:     time.Now().UnixMilli(),
-		},
-	}
-	if len(data) > 0 {
-		dataRest.Data = data[0]
-	}
-	return NewRespRest().SetDataResponse(dataRest)
+	return NewRespRest().SetDataResponse(NewRestSuccess(data...))
 }
 
 // RespRestException 响应标准格式的Rest系统异常错误
 func RespRestException(statusMessage ...string) Response {
-	status := &RestRespStatusStruct{
-		StatusCode:    StatusCodeException,
-		StatusMessage: statusMessageException,
-		Timestamp:     time.Now().UnixMilli(),
-	}
-	if len(statusMessage) > 0 {
-		status.StatusMessage = StatusMessage(statusMessage[0])
-	}
-	dataRest := &RestRespStruct{
-		Status: status,
-	}
-	return NewRespRest().SetDataResponse(dataRest)
+	return NewRespRest().SetDataResponse(NewRestException(statusMessage...))
 }
 
 // RespRestBadParameters 响应标准格式的Rest参数错误
 func RespRestBadParameters(statusMessage ...string) Response {
-	status := &RestRespStatusStruct{
-		StatusCode:    StatusCodeBadRequestParameters,
-		StatusMessage: statusMessageBadRequestParameters,
-		Timestamp:     time.Now().UnixMilli(),
-	}
-	if len(statusMessage) > 0 {
-		status.StatusMessage = StatusMessage(statusMessage[0])
-	}
-	dataRest := &RestRespStruct{
-		Status: status,
-	}
-	return NewRespRest().SetDataResponse(dataRest)
+	return NewRespRest().SetDataResponse(NewRestBadBadParameters(statusMessage...))
 }
 
 // RespRestUnAuthorized 响应标准格式的Rest未授权错误
 func RespRestUnAuthorized(statusMessage ...string) Response {
-	status := &RestRespStatusStruct{
-		StatusCode:    StatusCodeUnauthorized,
-		StatusMessage: statusMessageUnauthorized,
-		Timestamp:     time.Now().UnixMilli(),
-	}
-	if len(statusMessage) > 0 {
-		status.StatusMessage = StatusMessage(statusMessage[0])
-	}
-	dataRest := &RestRespStruct{
-		Status: status,
-	}
-	return NewRespRest().SetDataResponse(dataRest)
+	return NewRespRest().SetDataResponse(NewRestUnauthorized(statusMessage...))
 }
 
 // RespRestStatusError 响应标准格式的Rest状态错误
 func RespRestStatusError(statusCode StatusCode, statusMessage ...StatusMessage) Response {
-	dataRest := &RestRespStruct{
-		Status: &RestRespStatusStruct{
-			StatusCode: statusCode,
-			Timestamp:  time.Now().UnixMilli(),
-		},
-	}
-	if len(statusMessage) > 0 && statusMessage[0] != "" {
-		dataRest.Status.StatusMessage = statusMessage[0]
-	} else {
-		dataRest.Status.StatusMessage = GetStatusMessage(statusCode)
-	}
-	return NewRespRest().SetDataResponse(dataRest)
+	return NewRespRest().SetDataResponse(NewRestStatusError(statusCode, statusMessage...))
 }
 
 // RespRestBizError 响应标准格式的Rest业务错误
 func RespRestBizError(bizErrorCode BizErrorCode, bizErrorMessage BizErrorMessage) Response {
-	dataRest := &RestRespStruct{
-		Status: &RestRespStatusStruct{
-			StatusCode:      StatusCodeSuccess,
-			StatusMessage:   statusMessageSuccess,
-			BizErrorCode:    &bizErrorCode,
-			BizErrorMessage: &bizErrorMessage,
-			Timestamp:       time.Now().UnixMilli(),
-		},
-	}
-	return NewRespRest().SetDataResponse(dataRest)
+	return NewRespRest().SetDataResponse(NewRestBizError(bizErrorCode, bizErrorMessage))
 }
 
 // commonResp 普通响应

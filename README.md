@@ -1,5 +1,9 @@
 # starter-gin
 
+```
+go get github.com/golang-acexy/starter-gin
+```
+
 基于`github.com/gin-gonic/gin`封装的http服务组件
 
 ---
@@ -9,84 +13,55 @@
 屏蔽其他原始框架细节，提供统一的http服务注册方法，用户只需要关心Request/Response即可
 
 - 初始化
-    ```go
-    loader := parent.NewStarterLoader([]parent.Starter{
-        &ginstarter.GinStarter{
-            ListenAddress: ":8080",
-            DebugModule:   true,
-            Routers: []ginstarter.Router{
-                &router.DemoRouter{},
-                &router.ParamRouter{},
-                &router.AbortRouter{},
-                &router.BasicAuthRouter{},
-                &router.MyRestRouter{},
-            },
-            InitFunc: func(instance *gin.Engine) {
-                instance.GET("/ping", func(context *gin.Context) {
-                    context.String(http.StatusOK, "alive")
-                })
-                instance.GET("/err", func(context *gin.Context) {
-                    context.Status(500)
-                })
-            },
-            DisabledDefaultIgnoreHttpStatusCode: true,
-            DisableMethodNotAllowedError:        true,
-            RecoverHandlerResponse: func(ctx *gin.Context, err any) ginstarter.Response {
-                logger.Logrus().Errorln("Request catch exception", err)
-                return ginstarter.RespTextPlain("something error", http.StatusOK)
-            },
-            DisableHttpStatusCodeHandler: true,
-        },
-    })
-    
-    err := loader.Start()
-    if err != nil {
-        fmt.Printf("%+v\n", err)
-        return
-    }
-    
-    sys.ShutdownHolding()
-    ```
+  ```go
+  var starterLoader *parent.StarterLoader
+  
+  // 默认Gin表现行为
+  // 启用了非200状态码自动包裹响应
+  func TestGinDefault(t *testing.T) {
+      starterLoader = parent.NewStarterLoader([]parent.Starter{
+          &ginstarter.GinStarter{
+              ListenAddress: ":8080",
+              DebugModule:   true,
+              Routers: []ginstarter.Router{
+                  &router.DemoRouter{},
+                  &router.ParamRouter{},
+                  &router.AbortRouter{},
+                  &router.BasicAuthRouter{},
+                  &router.MyRestRouter{},
+              },
+              InitFunc: func(instance *gin.Engine) {
+                  instance.GET("/ping", func(context *gin.Context) {
+                      context.String(http.StatusOK, "alive")
+                  })
+                  instance.GET("/err", func(context *gin.Context) {
+                      context.Status(500)
+                  })
+              },
+              DisableDefaultIgnoreHttpCode: true,
+          },
+      })
+      err := starterLoader.Start()
+      if err != nil {
+          fmt.Printf("%+v\n", err)
+          return
+      }
+      sys.ShutdownHolding()
+  }
+  ```
 
 - 注册路由
-    ```go
-    type RouterInfo struct {
-        // GroupPath 路由分组路径
-        GroupPath string
-    
-        // BasicAuthAccount 如果指定基于BasicAuth认证的账户，则该GroupPath下资源将需要权限认证
-        BasicAuthAccount *BasicAuthAccount
-    }
-    ```
 
-  然后在初始化时指定将自动完成注册
+  ```go
+  type RouterInfo struct {
+    // GroupPath 路由分组路径
+    GroupPath string
+  
+    // 该Router下的中间件执行器
+    Middlewares []Middleware
+  }
+  ```
 
-    ```go
-    type AbortRouter struct { // 业务路由
-    }
-    
-    func (a *AbortRouter) Info() *ginstarter.RouterInfo {
-        return &ginstarter.RouterInfo{ // 配置路由信息
-            GroupPath: "abort",        // 
-        }
-    }
-    
-    // Handlers 路由功能
-    func (a *AbortRouter) Handlers(router *ginstarter.RouterWrapper) {
-        // 注册一个GET方法处理器
-        router.GET("invoke", a.invoke())
-    }
-    
-    func (a *AbortRouter) invoke() ginstarter.HandlerWrapper {
-        return func(request *ginstarter.Request) (ginstarter.Response, error) {
-            
-            // TODO: 完成业务
-            
-            // 响应一个http状态码203
-            return ginstarter.RespAbortWithStatus(203), nil
-        }
-    }
-    ```
 - 请求
   框架已封装常用的参数获取方法，在Handler中直接通过request执行，以`Must`开始的方法将在参数不满足条件时直接触发Panic，快速实现验参数不通过中断请求
 
@@ -94,8 +69,8 @@
     // HttpMethod 获取请求方法
     HttpMethod() string
     
-    // FullPath 获取请求全路径
-    FullPath() string
+    // RequestPath 获取请求全路径
+    RequestPath() string
     
     // RawGinContext 获取原始Gin上下文
     RawGinContext() *gin.Context
@@ -216,44 +191,49 @@
 
 ```go
 type GinStarter struct {
-    ...
-	// 模块组件在启动时执行初始化
-	InitFunc func(instance *gin.Engine)
-
-	// 自定义异常响应处理 如果不指定则使用默认方式
-	RecoverHandlerResponse RecoverHandlerResponse
-
-	// 禁用错误包装处理器 在出现非200响应码或者异常时，将自动进行转化
-	DisableHttpStatusCodeHandler bool
-	// 在启用非200响应码自动处理后，指定忽略需要自动包裹响应码
-	IgnoreHttpStatusCode []int
-	// 关闭系统内置的忽略的http状态码
-	DisabledDefaultIgnoreHttpStatusCode bool
-	// 在出现非200响应码或者异常时具体响应策略 如果不指定则使用默认处理器 仅在UseHttpStatusCodeHandler = true 生效
-	HttpStatusCodeCodeHandlerResponse HttpStatusCodeCodeHandlerResponse
-
-	// 响应数据的结构体解码器 默认为JSON方式解码
-	// 在使用NewRespRest响应结构体数据时解码为[]byte数据的解码器
-	// 如果自实现Response接口将不使用解码器
-	ResponseDataStructDecoder ResponseDataStructDecoder
-
-	// 关闭包裹405错误展示，使用404代替
-	DisableMethodNotAllowedError bool
-
-	// 禁用尝试获取真实IP
-	DisableForwardedByClientIP bool
-	...
+    
+    // 模块组件在启动时执行初始化
+    InitFunc func(instance *gin.Engine)
+    
+    // * 注册业务路由
+    Routers []Router
+    
+    // * 注册服务监听地址 :8080 (默认)
+    ListenAddress string // ip:port
+    
+    // 默认情况系统会将捕获的异常详细发给PanicResolver处理，如果不想将细节暴露向外
+    // 方案 1. 启用隐藏异常细节功能，系统将在触发panic重要错误时不再调用PanicResolver处理，并统一响应500错误
+    // 方案 2. 如果不想禁用异常时调度PanicResolver, 可以在初始化时手动设置自定义PanicResolver处理器
+    // * panic 将被分为框架内部错误和框架未知错误 框架内部错误是非敏感错误，不受该参数控制，每次触发PanicResolver，例如验证框架错误
+    HidePanicErrorDetails bool
+    // 全局异常响应处理器 如果不指定则使用默认方式
+    PanicResolver PanicResolver
+    
+    // 禁用异常http响应码Resolver
+    DisableBadHttpCodeResolver bool
+    // 启用异常http响应码Resolver 系统已内置常见的不处理的非正常响应码 可以禁用
+    DisableDefaultIgnoreHttpCode bool
+    // 启用异常http响应码Resolver 指定不处理特定的异常响应码
+    IgnoreHttpCode []int
+    // 启用异常http响应码Resolver 如果不指定则使用默认方式
+    BadHttpCodeResolver BadHttpCodeResolver
+    
+    // 自定义全局中间件 作用于所有请求 按照顺序执行
+    GlobalMiddlewares []Middleware
+    
+    // 响应数据的结构体解码器 默认为JSON方式解码
+    // 在使用NewRespRest响应结构体数据时解码为[]byte数据的解码器
+    // 如果自实现Response接口将不使用解码器
+    ResponseDataStructDecoder ResponseDataStructDecoder
+    
+    // ========== gin config
+    DebugModule        bool
+    MaxMultipartMemory int64
+    
+    // 关闭包裹405错误展示，使用404代替
+    DisableMethodNotAllowedError bool
+    
+    // 禁用尝试获取转发真实IP
+    DisableForwardedByClientIP bool
 }
 ```
-
-- RecoverHandlerResponse
-
-  框架自动捕获Panic异常，并执行默认处理方案，如果你想替换默认处理逻辑，可以注册该方法的具体实现逻辑
-
-- DisableHttpStatusCodeHandler
-
-  默认情况，当遇到非200响应码时，会自动进行响应处理，如果你不想使用默认处理方案，可以禁用该功能。IgnoreHttpStatusCode允许配置非200的例外错误码，不触发此逻辑
-
-- HttpStatusCodeCodeHandlerResponse
-
-  在DisableHttpStatusCodeHandler为false时，如果你想替换默认的非200错误码响应处理方案，可以注册该方法的具体实现逻辑 
