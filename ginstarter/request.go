@@ -257,6 +257,60 @@ func (r *Request) MustGetRawBodyString() string {
 	return conversion.FromBytes(r.MustGetRawBodyData())
 }
 
+// GetFormValue 获取Form表单的值
+func (r *Request) GetFormValue(name string) (string, bool) {
+	return r.ctx.GetPostForm(name)
+}
+
+// MustGetFormValue 获取Form表单的值
+// 任何错误将触发Panic流程中断
+func (r *Request) MustGetFormValue(name string) string {
+	v, ok := r.GetFormValue(name)
+	if !ok {
+		panic(&internalPanic{
+			statusCode: http.StatusBadRequest,
+			rawError:   errors.New("param name = " + name + " not set"),
+		})
+	}
+	return v
+}
+
+// GetFormArray 获取Form表单的值
+func (r *Request) GetFormArray(name string) ([]string, bool) {
+	return r.ctx.GetPostFormArray(name)
+}
+
+// MustGetFormArray 获取Form表单的值
+// 任何错误将触发Panic流程中断
+func (r *Request) MustGetFormArray(name string) []string {
+	v, ok := r.GetFormArray(name)
+	if !ok {
+		panic(&internalPanic{
+			statusCode: http.StatusBadRequest,
+			rawError:   errors.New("param name = " + name + " not set"),
+		})
+	}
+	return v
+}
+
+// GetFormMap 获取Form表单的值
+func (r *Request) GetFormMap(name string) (map[string]string, bool) {
+	return r.ctx.GetPostFormMap(name)
+}
+
+// MustGetFormMap 获取Form表单的值
+// 任何错误将触发Panic流程中断
+func (r *Request) MustGetFormMap(name string) map[string]string {
+	v, ok := r.GetFormMap(name)
+	if !ok {
+		panic(&internalPanic{
+			statusCode: http.StatusBadRequest,
+			rawError:   errors.New("param name = " + name + " not set"),
+		})
+	}
+	return v
+}
+
 // GetFormFile 获取上传文件内容
 func (r *Request) GetFormFile(name string) (*multipart.FileHeader, error) {
 	return r.ctx.FormFile(name)
