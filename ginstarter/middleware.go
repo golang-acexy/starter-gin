@@ -124,7 +124,7 @@ func panicToError(panicError any) (statusCode int, err error, internalError bool
 			err = fmt.Errorf("%v", t)
 		}
 	}
-	logger.Logrus().Errorf("panic: %v\n", err)
+	logger.Logrus().Errorf("panic: %v", err)
 	return
 }
 
