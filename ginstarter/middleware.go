@@ -275,7 +275,7 @@ func MediaTypeMiddleware(contentType []string, match ...func(request *Request) b
 }
 
 func isMatchMediaType(allowContentType []string, requestContentType string) bool {
-	return coll.SliceContains(allowContentType, strings.TrimSpace(strings.Split(requestContentType, ";")[0]), func(s1 *string, s2 *string) bool {
-		return strings.ToLower(*s1) == strings.ToLower(*s2)
+	return coll.SliceContains(allowContentType, strings.TrimSpace(strings.Split(requestContentType, ";")[0]), func(s1 string, s2 string) bool {
+		return strings.ToLower(s1) == strings.ToLower(s2)
 	})
 }
