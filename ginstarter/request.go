@@ -56,12 +56,12 @@ func (r *Request) RequestIP() string {
 
 // --------------- path 路径参数
 
-// GetPathParam 获取path路径参数 /:id/
+// GetPathParam 获取path路径参数 /:id
 func (r *Request) GetPathParam(name string) string {
 	return r.ctx.Param(name)
 }
 
-// GetPathParams 获取path路径参数 /:id/ 多个参数
+// GetPathParams 获取path路径参数 /:id 多个参数
 func (r *Request) GetPathParams(names ...string) map[string]string {
 	result := make(map[string]string, len(names))
 	if len(names) > 0 {
@@ -72,12 +72,12 @@ func (r *Request) GetPathParams(names ...string) map[string]string {
 	return result
 }
 
-// BindPathParams /:id/ 绑定结构体用于接收UriPath参数 结构体标签格式 `uri:""`
+// BindPathParams /:id 绑定结构体用于接收UriPath参数 结构体标签格式 `uri:""`
 func (r *Request) BindPathParams(object any) error {
 	return r.ctx.ShouldBindUri(object)
 }
 
-// MustBindPathParams /:id/ 绑定结构体用于接收UriPath参数 结构体标签格式 `uri:""`
+// MustBindPathParams /:id 绑定结构体用于接收UriPath参数 结构体标签格式 `uri:""`
 // 任何错误将触发Panic流程中断
 func (r *Request) MustBindPathParams(object any) {
 	err := r.BindPathParams(object)
