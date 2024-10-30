@@ -115,8 +115,8 @@ func NewRestException(statusMessage ...string) *RestRespStruct {
 	}
 }
 
-// NewRestBadBadParameters 响应标准参数错误Rest结构体
-func NewRestBadBadParameters(statusMessage ...string) *RestRespStruct {
+// NewRestBadParameters 响应标准参数错误Rest结构体
+func NewRestBadParameters(statusMessage ...string) *RestRespStruct {
 	status := &RestRespStatusStruct{
 		StatusCode:    StatusCodeBadRequestParameters,
 		StatusMessage: statusMessageBadRequestParameters,
