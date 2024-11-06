@@ -8,12 +8,12 @@ require (
 	github.com/acexy/golang-toolkit v0.0.32
 	github.com/gin-gonic/gin v1.10.0
 	github.com/go-playground/validator/v10 v10.22.1
-	github.com/golang-acexy/starter-parent v0.1.9
+	github.com/golang-acexy/starter-parent v0.1.10
 	github.com/sirupsen/logrus v1.9.3
 )
 
 require (
-	github.com/bytedance/sonic v1.12.3 // indirect
+	github.com/bytedance/sonic v1.12.4 // indirect
 	github.com/bytedance/sonic/loader v0.2.1 // indirect
 	github.com/cloudwego/base64x v0.1.4 // indirect
 	github.com/cloudwego/iasm v0.2.0 // indirect
