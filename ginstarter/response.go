@@ -95,7 +95,7 @@ func RespRestException(statusMessage ...string) Response {
 
 // RespRestBadParameters 响应标准格式的Rest参数错误
 func RespRestBadParameters(statusMessage ...string) Response {
-	return NewRespRest().SetDataResponse(NewRestBadBadParameters(statusMessage...))
+	return NewRespRest().SetDataResponse(NewRestBadParameters(statusMessage...))
 }
 
 // RespRestUnAuthorized 响应标准格式的Rest未授权错误
