@@ -125,14 +125,14 @@ func (g *GinStarter) Start() (interface{}, error) {
 	}
 
 	if len(g.GlobalMiddlewares) > 0 {
-		for _, v := range g.GlobalMiddlewares {
-			if v != nil {
+		for i := range g.GlobalMiddlewares {
+			middleware := g.GlobalMiddlewares[i]
+			if middleware != nil {
 				ginEngine.Use(func(ctx *gin.Context) {
-					response, continueExecute := v(&Request{ctx: ctx})
-					if !continueExecute {
+					response, continued := middleware(&Request{ctx: ctx})
+					if !continued {
 						httpResponse(ctx, response)
 						ctx.Abort()
-						return
 					} else {
 						ctx.Next()
 					}

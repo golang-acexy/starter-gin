@@ -9,13 +9,13 @@ func registerRouter(g *gin.Engine, routers []Router) {
 		routerInfo := v.Info()
 		if len(routerInfo.Middlewares) > 0 {
 			group := g.Group(routerInfo.GroupPath)
-			for _, m := range routerInfo.Middlewares {
+			for i := range routerInfo.Middlewares {
+				middleware := routerInfo.Middlewares[i]
 				group.Use(func(ctx *gin.Context) {
-					response, continueExecute := m(&Request{ctx: ctx})
-					if !continueExecute {
+					response, continued := middleware(&Request{ctx: ctx})
+					if !continued {
 						httpResponse(ctx, response)
 						ctx.Abort()
-						return
 					} else {
 						ctx.Next()
 					}
