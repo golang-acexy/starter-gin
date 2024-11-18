@@ -2,6 +2,7 @@ package test
 
 import (
 	"fmt"
+	"github.com/acexy/golang-toolkit/logger"
 	"github.com/acexy/golang-toolkit/sys"
 	"github.com/acexy/golang-toolkit/util/json"
 	"github.com/gin-gonic/gin"
@@ -80,10 +81,18 @@ func TestGinCustomer(t *testing.T) {
 		//},
 		GlobalMiddlewares: []ginstarter.Middleware{
 			func(request *ginstarter.Request) (ginstarter.Response, bool) {
-				if request.RequestPath() == "/mdw" {
+				t, _ := request.GetQueryParam("t")
+				if t == "" {
+					logger.Logrus().Infoln("中间件1 不继续执行 忽略其他中间件")
 					return ginstarter.RespTextPlain("middleware", http.StatusOK), false
+				} else {
+					logger.Logrus().Infoln("中间件1 继续执行 不忽略其他中间件")
+					return nil, true
 				}
-				return ginstarter.RespTextPlain("hello world", http.StatusOK), true
+			},
+			func(request *ginstarter.Request) (ginstarter.Response, bool) {
+				logger.Logrus().Infoln("middlewares 2 执行")
+				return nil, true
 			},
 		},
 	}
