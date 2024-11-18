@@ -1,5 +1,7 @@
 github.com/acexy/golang-toolkit v0.0.32 h1:nP386D4Ukig8BY0F9NJRDeoZlkRCArjfqs+KeR7FX+c=
 github.com/acexy/golang-toolkit v0.0.32/go.mod h1:2Yu14VjaHgti1sTg8kB1GQKG2+S/AS/nncczOA9x6gk=
+github.com/acexy/golang-toolkit v0.0.33 h1:LEQ9K2eUtTZbUunJTHPYq0hz7ZNCzDkLsD3KdRaLMZM=
+github.com/acexy/golang-toolkit v0.0.33/go.mod h1:CmfHdxJkdvOLpeXXHbFaYenwnpOSucwVjf/1qXOiwMM=
 github.com/bytedance/sonic v1.12.4 h1:9Csb3c9ZJhfUWeMtpCDCq6BUoH5ogfDFLUgQ/jG+R0k=
 github.com/bytedance/sonic v1.12.4/go.mod h1:B8Gt/XvtZ3Fqj+iSKMypzymZxw/FVwgIGKzMzT9r/rk=
 github.com/bytedance/sonic/loader v0.1.1/go.mod h1:ncP89zfokxS5LZrJxl5z0UJcsk4M4yY2JpfqGeCtNLU=
@@ -26,6 +28,8 @@ github.com/go-playground/universal-translator v0.18.1 h1:Bcnm0ZwsGyWbCzImXv+pAJn
 github.com/go-playground/universal-translator v0.18.1/go.mod h1:xekY+UJKNuX9WP91TpwSH2VMlDf28Uj24BCp08ZFTUY=
 github.com/go-playground/validator/v10 v10.22.1 h1:40JcKH+bBNGFczGuoBYgX4I6m/i27HYW8P9FDk5PbgA=
 github.com/go-playground/validator/v10 v10.22.1/go.mod h1:dbuPbCMFw/DrkbEynArYaCwl3amGuJotoKCe95atGMM=
+github.com/go-playground/validator/v10 v10.23.0 h1:/PwmTwZhS0dPkav3cdK9kV1FsAmrL8sThn8IHr/sO+o=
+github.com/go-playground/validator/v10 v10.23.0/go.mod h1:dbuPbCMFw/DrkbEynArYaCwl3amGuJotoKCe95atGMM=
 github.com/goccy/go-json v0.10.3 h1:KZ5WoDbxAIgm2HNbYckL0se1fHD6rz5j4ywS6ebzDqA=
 github.com/goccy/go-json v0.10.3/go.mod h1:oq7eo15ShAhp70Anwd5lgX2pLfOS3QCiwU/PULtXL6M=
 github.com/golang-acexy/starter-parent v0.1.10 h1:lntYQQdzHmQRZgkIoHvkKINnPyhwSUefmAxi0vrHsKk=

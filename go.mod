@@ -5,9 +5,9 @@ go 1.21.0
 toolchain go1.21.5
 
 require (
-	github.com/acexy/golang-toolkit v0.0.32
+	github.com/acexy/golang-toolkit v0.0.33
 	github.com/gin-gonic/gin v1.10.0
-	github.com/go-playground/validator/v10 v10.22.1
+	github.com/go-playground/validator/v10 v10.23.0
 	github.com/golang-acexy/starter-parent v0.1.10
 	github.com/sirupsen/logrus v1.9.3
 )
