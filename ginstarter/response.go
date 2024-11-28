@@ -55,7 +55,7 @@ func (r *restResp) DataBuilder(fn func() *ResponseData) Response {
 
 // SetData 设置Rest标准的响应结构
 func (r *restResp) SetData(data any) *ResponseData {
-	bytes, err := ginStarter.ResponseDataStructDecoder.Decode(data)
+	bytes, err := ginConfig.ResponseDataStructDecoder.Decode(data)
 	if err != nil {
 		panic(err)
 	}
@@ -65,7 +65,7 @@ func (r *restResp) SetData(data any) *ResponseData {
 
 // SetDataResponse 设置Rest标准的响应结构 并返回响应体数据
 func (r *restResp) SetDataResponse(data any) Response {
-	bytes, err := ginStarter.ResponseDataStructDecoder.Decode(data)
+	bytes, err := ginConfig.ResponseDataStructDecoder.Decode(data)
 	if err != nil {
 		panic(err)
 	}
