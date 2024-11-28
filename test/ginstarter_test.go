@@ -21,24 +21,25 @@ var starterLoader *parent.StarterLoader
 func TestGinDefault(t *testing.T) {
 	starterLoader = parent.NewStarterLoader([]parent.Starter{
 		&ginstarter.GinStarter{
-			ListenAddress: ":8080",
-			DebugModule:   true,
-			Routers: []ginstarter.Router{
-				&router.DemoRouter{},
-				&router.ParamRouter{},
-				&router.AbortRouter{},
-				&router.BasicAuthRouter{},
-				&router.MyRestRouter{},
+			Config: ginstarter.GinConfig{ListenAddress: ":8080",
+				DebugModule: true,
+				Routers: []ginstarter.Router{
+					&router.DemoRouter{},
+					&router.ParamRouter{},
+					&router.AbortRouter{},
+					&router.BasicAuthRouter{},
+					&router.MyRestRouter{},
+				},
+				InitFunc: func(instance *gin.Engine) {
+					instance.GET("/ping", func(context *gin.Context) {
+						context.String(http.StatusOK, "alive")
+					})
+					instance.GET("/err", func(context *gin.Context) {
+						context.Status(500)
+					})
+				},
+				DisableDefaultIgnoreHttpCode: true,
 			},
-			InitFunc: func(instance *gin.Engine) {
-				instance.GET("/ping", func(context *gin.Context) {
-					context.String(http.StatusOK, "alive")
-				})
-				instance.GET("/err", func(context *gin.Context) {
-					context.Status(500)
-				})
-			},
-			DisableDefaultIgnoreHttpCode: true,
 		},
 	})
 	err := starterLoader.Start()
@@ -54,45 +55,46 @@ func TestGinDefault(t *testing.T) {
 // 自定义panic异常响应
 func TestGinCustomer(t *testing.T) {
 	starter := &ginstarter.GinStarter{
-		ListenAddress: ":8080",
-		DebugModule:   true,
-		Routers: []ginstarter.Router{
-			&router.DemoRouter{},
-			&router.ParamRouter{},
-			&router.AbortRouter{},
-			&router.BasicAuthRouter{},
-			&router.MyRestRouter{},
-		},
-		HidePanicErrorDetails: false,
-		InitFunc: func(instance *gin.Engine) {
-			instance.GET("/ping", func(context *gin.Context) {
-				context.String(http.StatusOK, "alive")
-			})
-			instance.GET("/err", func(context *gin.Context) {
-				context.Status(500)
-			})
-		},
-		DisableBadHttpCodeResolver: true,
-		//DisableDefaultIgnoreHttpCode: true,
-		DisableMethodNotAllowedError: false,
-		//PanicResolver: func(ctx *gin.Context, err error) ginstarter.Response {
-		//	logger.Logrus().Errorln("Request catch exception", err)
-		//	return ginstarter.RespTextPlain("something error", http.StatusOK)
-		//},
-		GlobalMiddlewares: []ginstarter.Middleware{
-			func(request *ginstarter.Request) (ginstarter.Response, bool) {
-				t, _ := request.GetQueryParam("t")
-				if t == "" {
-					logger.Logrus().Infoln("中间件1 不继续执行 忽略其他中间件")
-					return ginstarter.RespTextPlain("middleware", http.StatusOK), false
-				} else {
-					logger.Logrus().Infoln("中间件1 继续执行 不忽略其他中间件")
-					return nil, true
-				}
+		Config: ginstarter.GinConfig{ListenAddress: ":8080",
+			DebugModule: true,
+			Routers: []ginstarter.Router{
+				&router.DemoRouter{},
+				&router.ParamRouter{},
+				&router.AbortRouter{},
+				&router.BasicAuthRouter{},
+				&router.MyRestRouter{},
 			},
-			func(request *ginstarter.Request) (ginstarter.Response, bool) {
-				logger.Logrus().Infoln("middlewares 2 执行")
-				return nil, true
+			HidePanicErrorDetails: false,
+			InitFunc: func(instance *gin.Engine) {
+				instance.GET("/ping", func(context *gin.Context) {
+					context.String(http.StatusOK, "alive")
+				})
+				instance.GET("/err", func(context *gin.Context) {
+					context.Status(500)
+				})
+			},
+			DisableBadHttpCodeResolver: true,
+			//DisableDefaultIgnoreHttpCode: true,
+			DisableMethodNotAllowedError: false,
+			//PanicResolver: func(ctx *gin.Context, err error) ginstarter.Response {
+			//	logger.Logrus().Errorln("Request catch exception", err)
+			//	return ginstarter.RespTextPlain("something error", http.StatusOK)
+			//},
+			GlobalMiddlewares: []ginstarter.Middleware{
+				func(request *ginstarter.Request) (ginstarter.Response, bool) {
+					t, _ := request.GetQueryParam("t")
+					if t == "" {
+						logger.Logrus().Infoln("中间件1 不继续执行 忽略其他中间件")
+						return ginstarter.RespTextPlain("middleware", http.StatusOK), false
+					} else {
+						logger.Logrus().Infoln("中间件1 继续执行 不忽略其他中间件")
+						return nil, true
+					}
+				},
+				func(request *ginstarter.Request) (ginstarter.Response, bool) {
+					logger.Logrus().Infoln("middlewares 2 执行")
+					return nil, true
+				},
 			},
 		},
 	}
@@ -110,8 +112,11 @@ func TestGinCustomer(t *testing.T) {
 func TestGinLoadAndUnload(t *testing.T) {
 	starterLoader = parent.NewStarterLoader([]parent.Starter{
 		&ginstarter.GinStarter{
-			ListenAddress: ":8080",
-			DebugModule:   true},
+			Config: ginstarter.GinConfig{
+				ListenAddress: ":8080",
+				DebugModule:   true,
+			},
+		},
 	})
 	err := starterLoader.Start()
 	if err != nil {
