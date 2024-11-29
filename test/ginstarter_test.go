@@ -19,6 +19,7 @@ var starterLoader *parent.StarterLoader
 // 默认Gin表现行为
 // 启用了非200状态码自动包裹响应
 func TestGinDefault(t *testing.T) {
+	sys.EnableLocalTraceId(nil)
 	starterLoader = parent.NewStarterLoader([]parent.Starter{
 		&ginstarter.GinStarter{
 			Config: ginstarter.GinConfig{ListenAddress: ":8080",
@@ -30,6 +31,7 @@ func TestGinDefault(t *testing.T) {
 					&router.BasicAuthRouter{},
 					&router.MyRestRouter{},
 				},
+				EnableGoroutineTraceIdResponse: true,
 				InitFunc: func(instance *gin.Engine) {
 					instance.GET("/ping", func(context *gin.Context) {
 						context.String(http.StatusOK, "alive")

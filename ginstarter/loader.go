@@ -53,6 +53,11 @@ type GinConfig struct {
 	// 如果自实现Response接口将不使用解码器
 	ResponseDataStructDecoder ResponseDataStructDecoder
 
+	// 尝试启用TraceId响应
+	// https://github.com/acexy/golang-toolkit/blob/main/sys/threadlocal.go
+	// 如果工作环境开启EnableLocalTraceId ，将自动响应TranceId头
+	EnableGoroutineTraceIdResponse bool
+
 	// ========== gin config
 	DebugModule        bool
 	MaxMultipartMemory int64
