@@ -14,8 +14,8 @@ func registerRouter(g *gin.Engine, routers []Router) {
 				group.Use(func(ctx *gin.Context) {
 					response, continued := middleware(&Request{ctx: ctx})
 					if !continued {
-						ctx.Abort()
 						httpResponse(ctx, response)
+						ctx.Abort()
 					} else {
 						ctx.Next()
 					}

@@ -38,7 +38,7 @@ func TestGinDefault(t *testing.T) {
 						context.Status(500)
 					})
 				},
-				DisableDefaultIgnoreHttpCode: true,
+				//DisableDefaultIgnoreHttpCode: true,
 			},
 		},
 	})

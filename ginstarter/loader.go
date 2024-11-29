@@ -8,9 +8,11 @@ import (
 	"github.com/golang-acexy/starter-parent/parent"
 	"github.com/sirupsen/logrus"
 	"net/http"
+	"sync"
 	"time"
 )
 
+var once sync.Once
 var server *http.Server
 var ginEngine *gin.Engine
 var ginConfig *GinConfig
@@ -36,7 +38,7 @@ type GinConfig struct {
 
 	// 禁用异常http响应码Resolver
 	DisableBadHttpCodeResolver bool
-	// 启用异常http响应码Resolver 系统已内置常见的不处理的非正常响应码 可以禁用
+	// 禁用系统内置的忽略异常响应码
 	DisableDefaultIgnoreHttpCode bool
 	// 启用异常http响应码Resolver 指定不处理特定的异常响应码
 	IgnoreHttpCode []int
@@ -66,87 +68,91 @@ type GinStarter struct {
 
 	// GinConfig 配置
 	Config GinConfig
-	// 懒加载函数，用于在实际执行时动态获取配置 该权重高于GormConfig的直接配置
+	// 懒加载函数，用于在实际执行时动态获取配置 该权重高于Config的直接配置
 	LazyConfig func() GinConfig
 	lazyConfig *GinConfig
 	// 自定义Gin模块的组件属性
 	GinSetting *parent.Setting
 }
 
+// 获取配置信息
+func (g *GinStarter) getConfig() *GinConfig {
+	once.Do(func() {
+		if g.LazyConfig != nil {
+			config := g.LazyConfig()
+			ginConfig = &config
+		} else {
+			ginConfig = &g.Config
+		}
+	})
+	return ginConfig
+}
+
 func (g *GinStarter) Setting() *parent.Setting {
 	if g.GinSetting != nil {
 		return g.GinSetting
 	}
+	config := g.getConfig()
 	return parent.NewSetting(
 		"Gin-Starter",
 		0,
 		false,
 		time.Second*30,
 		func(instance interface{}) {
-			if g.Config.InitFunc != nil {
-				g.Config.InitFunc(instance.(*gin.Engine))
+			if config.InitFunc != nil {
+				config.InitFunc(instance.(*gin.Engine))
 			}
 		})
 }
 
 func (g *GinStarter) Start() (interface{}, error) {
 	var err error
-	if g.LazyConfig != nil {
-		if g.lazyConfig == nil {
-			g.Config = g.LazyConfig()
-		} else {
-			g.Config = *g.lazyConfig
-		}
-	}
-	ginConfig = &g.Config
-	if g.Config.DebugModule {
+	config := g.getConfig()
+	if config.DebugModule {
 		gin.SetMode(gin.DebugMode)
 	} else {
 		gin.SetMode(gin.ReleaseMode)
 	}
-
 	gin.DefaultWriter = &logrusLogger{log: logger.Logrus(), level: logrus.DebugLevel}
 	gin.DefaultErrorWriter = &logrusLogger{log: logger.Logrus(), level: logrus.ErrorLevel}
 	ginEngine = gin.New()
-
 	registerValidators()
-
 	ginEngine.Use(recoverHandler())
 
-	if g.Config.PanicResolver == nil {
-		g.Config.PanicResolver = panicResolver
+	if config.PanicResolver == nil {
+		config.PanicResolver = panicResolver
 	}
 
-	if g.Config.MaxMultipartMemory > 0 {
-		ginEngine.MaxMultipartMemory = g.Config.MaxMultipartMemory
+	if config.MaxMultipartMemory > 0 {
+		ginEngine.MaxMultipartMemory = config.MaxMultipartMemory
 	}
 
-	ginEngine.ForwardedByClientIP = !g.Config.DisableForwardedByClientIP
+	ginEngine.ForwardedByClientIP = !config.DisableForwardedByClientIP
 
-	if !g.Config.DisableMethodNotAllowedError {
+	if !config.DisableMethodNotAllowedError {
 		ginEngine.HandleMethodNotAllowed = true
 	}
 
-	if !g.Config.DisableBadHttpCodeResolver {
+	if !config.DisableBadHttpCodeResolver {
 		ginEngine.Use(responseRewriteHandler())
-		if g.Config.BadHttpCodeResolver == nil {
-			g.Config.BadHttpCodeResolver = badHttpCodeResolver
+		if config.BadHttpCodeResolver == nil {
+			config.BadHttpCodeResolver = badHttpCodeResolver
 		}
 	}
 
-	if g.Config.ResponseDataStructDecoder == nil {
-		g.Config.ResponseDataStructDecoder = responseJsonDataStructDecoder{}
+	if config.ResponseDataStructDecoder == nil {
+		config.ResponseDataStructDecoder = responseJsonDataStructDecoder{}
 	}
 
-	if len(g.Config.GlobalMiddlewares) > 0 {
-		for i := range g.Config.GlobalMiddlewares {
-			middleware := g.Config.GlobalMiddlewares[i]
+	if len(config.GlobalMiddlewares) > 0 {
+		for i := range config.GlobalMiddlewares {
+			middleware := config.GlobalMiddlewares[i]
 			if middleware != nil {
 				ginEngine.Use(func(ctx *gin.Context) {
 					response, continued := middleware(&Request{ctx: ctx})
 					if !continued {
-						ctx.Abort()
 						httpResponse(ctx, response)
+						ctx.Abort()
 					} else {
 						ctx.Next()
 					}
@@ -155,16 +161,16 @@ func (g *GinStarter) Start() (interface{}, error) {
 		}
 	}
 
-	if len(g.Config.Routers) > 0 {
-		registerRouter(ginEngine, g.Config.Routers)
+	if len(config.Routers) > 0 {
+		registerRouter(ginEngine, config.Routers)
 	}
 
-	if g.Config.ListenAddress == "" {
-		g.Config.ListenAddress = ":8080"
+	if config.ListenAddress == "" {
+		config.ListenAddress = ":8080"
 	}
 
 	server = &http.Server{
-		Addr:    g.Config.ListenAddress,
+		Addr:    config.ListenAddress,
 		Handler: ginEngine,
 	}
 
@@ -191,7 +197,7 @@ func (g *GinStarter) Stop(maxWaitTime time.Duration) (gracefully, stopped bool, 
 	} else {
 		gracefully = true
 	}
-	stopped = !net.Telnet(g.Config.ListenAddress, time.Second)
+	stopped = !net.Telnet(g.getConfig().ListenAddress, time.Second)
 	return
 }
 

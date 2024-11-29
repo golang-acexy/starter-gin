@@ -163,14 +163,12 @@ func recoverHandler() gin.HandlerFunc {
 				} else {
 					statusCode = ctx.Writer.Status()
 				}
-
 				var response Response
 				if !ginConfig.DisableBadHttpCodeResolver {
 					response = ginConfig.BadHttpCodeResolver(statusCode, errMsg)
 				} else {
 					response = RespTextPlain(errMsg, statusCode)
 				}
-
 				httpResponse(ctx, response)
 				if rewriter != nil {
 					rewriter.ResponseWriter.WriteHeader(rewriter.statusCode)
@@ -180,32 +178,30 @@ func recoverHandler() gin.HandlerFunc {
 		}()
 
 		ctx.Next()
-		if !ctx.IsAborted() {
-			// 异常响应码处理
-			if !ginConfig.DisableBadHttpCodeResolver {
-				var statusCode int
-				var rewriter *responseRewriter
-				if v, ok := ctx.Writer.(*responseRewriter); ok {
-					rewriter = v
-					if v.statusCode != 0 && v.statusCode != http.StatusOK {
-						statusCode = v.statusCode
-					} else {
-						statusCode = v.ResponseWriter.Status()
-					}
+		// 异常响应码处理
+		if !ginConfig.DisableBadHttpCodeResolver {
+			var statusCode int
+			var rewriter *responseRewriter
+			if v, ok := ctx.Writer.(*responseRewriter); ok {
+				rewriter = v
+				if v.statusCode != 0 && v.statusCode != http.StatusOK {
+					statusCode = v.statusCode
 				} else {
-					statusCode = ctx.Writer.Status()
+					statusCode = v.ResponseWriter.Status()
 				}
-				if statusCode != http.StatusOK {
-					if isIgnoreHttpStatusCode(statusCode) {
-						return
-					}
-					logger.Logrus().Warningln("Bad response path:", ctx.Request.URL, "status code:", statusCode)
-					response := ginConfig.BadHttpCodeResolver(statusCode, "")
-					httpResponse(ctx, response)
-					if rewriter != nil {
-						rewriter.ResponseWriter.WriteHeader(rewriter.statusCode)
-						_, _ = rewriter.ResponseWriter.Write(rewriter.body.Bytes())
-					}
+			} else {
+				statusCode = ctx.Writer.Status()
+			}
+			if statusCode != http.StatusOK {
+				if isIgnoreHttpStatusCode(statusCode) {
+					return
+				}
+				logger.Logrus().Warningln("Bad response path:", ctx.Request.URL, "status code:", statusCode)
+				response := ginConfig.BadHttpCodeResolver(statusCode, "")
+				httpResponse(ctx, response)
+				if rewriter != nil {
+					rewriter.ResponseWriter.WriteHeader(rewriter.statusCode)
+					_, _ = rewriter.ResponseWriter.Write(rewriter.body.Bytes())
 				}
 			}
 		}
