@@ -73,7 +73,7 @@ func TestGinCustomer(t *testing.T) {
 					context.Status(500)
 				})
 			},
-			DisableBadHttpCodeResolver: true,
+			//DisableBadHttpCodeResolver: true,
 			//DisableDefaultIgnoreHttpCode: true,
 			DisableMethodNotAllowedError: false,
 			//PanicResolver: func(ctx *gin.Context, err error) ginstarter.Response {
@@ -88,7 +88,7 @@ func TestGinCustomer(t *testing.T) {
 						return ginstarter.RespTextPlain("middleware", http.StatusOK), false
 					} else {
 						logger.Logrus().Infoln("中间件1 继续执行 不忽略其他中间件")
-						return nil, true
+						return ginstarter.RespRestSuccess(), true
 					}
 				},
 				func(request *ginstarter.Request) (ginstarter.Response, bool) {

@@ -180,31 +180,32 @@ func recoverHandler() gin.HandlerFunc {
 		}()
 
 		ctx.Next()
-
-		// 异常响应码处理
-		if !ginConfig.DisableBadHttpCodeResolver {
-			var statusCode int
-			var rewriter *responseRewriter
-			if v, ok := ctx.Writer.(*responseRewriter); ok {
-				rewriter = v
-				if v.statusCode != 0 && v.statusCode != http.StatusOK {
-					statusCode = v.statusCode
+		if !ctx.IsAborted() {
+			// 异常响应码处理
+			if !ginConfig.DisableBadHttpCodeResolver {
+				var statusCode int
+				var rewriter *responseRewriter
+				if v, ok := ctx.Writer.(*responseRewriter); ok {
+					rewriter = v
+					if v.statusCode != 0 && v.statusCode != http.StatusOK {
+						statusCode = v.statusCode
+					} else {
+						statusCode = v.ResponseWriter.Status()
+					}
 				} else {
-					statusCode = v.ResponseWriter.Status()
+					statusCode = ctx.Writer.Status()
 				}
-			} else {
-				statusCode = ctx.Writer.Status()
-			}
-			if statusCode != http.StatusOK {
-				if isIgnoreHttpStatusCode(statusCode) {
-					return
-				}
-				logger.Logrus().Warningln("Bad response path:", ctx.Request.URL, "status code:", statusCode)
-				response := ginConfig.BadHttpCodeResolver(statusCode, "")
-				httpResponse(ctx, response)
-				if rewriter != nil {
-					rewriter.ResponseWriter.WriteHeader(rewriter.statusCode)
-					_, _ = rewriter.ResponseWriter.Write(rewriter.body.Bytes())
+				if statusCode != http.StatusOK {
+					if isIgnoreHttpStatusCode(statusCode) {
+						return
+					}
+					logger.Logrus().Warningln("Bad response path:", ctx.Request.URL, "status code:", statusCode)
+					response := ginConfig.BadHttpCodeResolver(statusCode, "")
+					httpResponse(ctx, response)
+					if rewriter != nil {
+						rewriter.ResponseWriter.WriteHeader(rewriter.statusCode)
+						_, _ = rewriter.ResponseWriter.Write(rewriter.body.Bytes())
+					}
 				}
 			}
 		}

@@ -13,7 +13,7 @@ import (
 
 var server *http.Server
 var ginEngine *gin.Engine
-var ginConfig GinConfig
+var ginConfig *GinConfig
 
 type GinConfig struct {
 
@@ -28,8 +28,8 @@ type GinConfig struct {
 
 	// 默认情况系统会将捕获的异常详细发给PanicResolver处理，如果不想将细节暴露向外
 	// 方案 1. 启用隐藏异常细节功能，系统将在触发panic重要错误时不再调用PanicResolver处理，并统一响应500错误
-	// 方案 2. 如果不想禁用异常时调度PanicResolver, 可以在初始化时手动设置自定义PanicResolver处理器
-	// * panic 将被分为框架内部错误和框架未知错误 框架内部错误是非敏感错误，不受该参数控制，每次触发PanicResolver，例如验证框架错误
+	// 方案 2. 如果不想禁用异常时调用PanicResolver, 可以在初始化时手动设置自定义PanicResolver处理器
+	// * panic 将被分为框架内部错误和框架未知错误 框架内部错误是非敏感错误，不受该参数控制，每次都会触发PanicResolver，例如验证框架错误
 	HidePanicErrorDetails bool
 	// 全局异常响应处理器 如果不指定则使用默认方式
 	PanicResolver PanicResolver
@@ -98,7 +98,7 @@ func (g *GinStarter) Start() (interface{}, error) {
 			g.Config = *g.lazyConfig
 		}
 	}
-	ginConfig = g.Config
+	ginConfig = &g.Config
 	if g.Config.DebugModule {
 		gin.SetMode(gin.DebugMode)
 	} else {
@@ -145,8 +145,8 @@ func (g *GinStarter) Start() (interface{}, error) {
 				ginEngine.Use(func(ctx *gin.Context) {
 					response, continued := middleware(&Request{ctx: ctx})
 					if !continued {
-						httpResponse(ctx, response)
 						ctx.Abort()
+						httpResponse(ctx, response)
 					} else {
 						ctx.Next()
 					}
