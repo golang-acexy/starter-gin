@@ -70,7 +70,6 @@ type GinStarter struct {
 	Config GinConfig
 	// 懒加载函数，用于在实际执行时动态获取配置 该权重高于Config的直接配置
 	LazyConfig func() GinConfig
-	lazyConfig *GinConfig
 	// 自定义Gin模块的组件属性
 	GinSetting *parent.Setting
 }
