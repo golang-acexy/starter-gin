@@ -61,7 +61,7 @@ var (
 		body.Status.StatusCode = statusCode
 
 		return NewRespRest().DataBuilder(func() *ResponseData {
-			bodyBytes, _ := ginStarter.ResponseDataStructDecoder.Decode(body)
+			bodyBytes, _ := ginConfig.ResponseDataStructDecoder.Decode(body)
 			return NewResponseDataWithStatusCode(gin.MIMEJSON, bodyBytes, http.StatusOK)
 		})
 	}
@@ -82,15 +82,15 @@ func init() {
 }
 
 func isIgnoreHttpStatusCode(httpCode int) bool {
-	if !ginStarter.DisableDefaultIgnoreHttpCode {
+	if !ginConfig.DisableDefaultIgnoreHttpCode {
 		for _, v := range defaultIgnoreHttpStatusCode {
 			if httpCode == v {
 				return true
 			}
 		}
 	}
-	if len(ginStarter.IgnoreHttpCode) > 0 {
-		for _, v := range ginStarter.IgnoreHttpCode {
+	if len(ginConfig.IgnoreHttpCode) > 0 {
+		for _, v := range ginConfig.IgnoreHttpCode {
 			if httpCode == v {
 				return true
 			}
@@ -138,7 +138,7 @@ func recoverHandler() gin.HandlerFunc {
 				var errMsg string
 				// 将panic异常进行转换
 				status, err, internalError := panicToError(panicError)
-				if ginStarter.HidePanicErrorDetails { // 禁用异常信息显示
+				if ginConfig.HidePanicErrorDetails { // 禁用异常信息显示
 					if !internalError {
 						errMsg = ""
 						status = 500
@@ -146,7 +146,7 @@ func recoverHandler() gin.HandlerFunc {
 						errMsg = err.Error()
 					}
 				} else {
-					errMsg = ginStarter.PanicResolver(err)
+					errMsg = ginConfig.PanicResolver(err)
 				}
 
 				if status != 0 {
@@ -163,14 +163,12 @@ func recoverHandler() gin.HandlerFunc {
 				} else {
 					statusCode = ctx.Writer.Status()
 				}
-
 				var response Response
-				if !ginStarter.DisableBadHttpCodeResolver {
-					response = ginStarter.BadHttpCodeResolver(statusCode, errMsg)
+				if !ginConfig.DisableBadHttpCodeResolver {
+					response = ginConfig.BadHttpCodeResolver(statusCode, errMsg)
 				} else {
 					response = RespTextPlain(errMsg, statusCode)
 				}
-
 				httpResponse(ctx, response)
 				if rewriter != nil {
 					rewriter.ResponseWriter.WriteHeader(rewriter.statusCode)
@@ -180,9 +178,8 @@ func recoverHandler() gin.HandlerFunc {
 		}()
 
 		ctx.Next()
-
 		// 异常响应码处理
-		if !ginStarter.DisableBadHttpCodeResolver {
+		if !ginConfig.DisableBadHttpCodeResolver {
 			var statusCode int
 			var rewriter *responseRewriter
 			if v, ok := ctx.Writer.(*responseRewriter); ok {
@@ -200,7 +197,7 @@ func recoverHandler() gin.HandlerFunc {
 					return
 				}
 				logger.Logrus().Warningln("Bad response path:", ctx.Request.URL, "status code:", statusCode)
-				response := ginStarter.BadHttpCodeResolver(statusCode, "")
+				response := ginConfig.BadHttpCodeResolver(statusCode, "")
 				httpResponse(ctx, response)
 				if rewriter != nil {
 					rewriter.ResponseWriter.WriteHeader(rewriter.statusCode)

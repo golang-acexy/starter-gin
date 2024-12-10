@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"github.com/acexy/golang-toolkit/logger"
+	"github.com/acexy/golang-toolkit/sys"
 	"github.com/gin-gonic/gin"
 	"net/http"
 )
@@ -137,6 +138,11 @@ func (r *RouterWrapper) handler(methods []string, path string, contentType []str
 }
 
 func httpResponse(context *gin.Context, response Response) {
+
+	// 是否启用traceId响应
+	if ginConfig.EnableGoroutineTraceIdResponse && sys.IsEnabledLocalTraceId() {
+		context.Header("Trace-Id", sys.GetLocalTraceId())
+	}
 
 	// 如果是普通响应 判断是否使用了gin原始响应功能
 	if instance, ok := response.(*commonResp); ok {
