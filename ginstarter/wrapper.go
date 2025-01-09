@@ -3,9 +3,9 @@ package ginstarter
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"github.com/acexy/golang-toolkit/logger"
 	"github.com/acexy/golang-toolkit/sys"
-	"github.com/acexy/golang-toolkit/util/json"
 	"github.com/gin-gonic/gin"
 	"net/http"
 )
@@ -334,7 +334,7 @@ func (r *ResponseData) AddCookie(cookie *ResponseCookie) *ResponseData {
 }
 
 func (r *ResponseData) ToDebugString() string {
-	return json.ToJson(r)
+	return fmt.Sprintf("body: %s head: %v content-type: %s", string(r.data), r.headers, r.contentType)
 }
 
 // PreInterceptor 前置拦截器
