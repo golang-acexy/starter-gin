@@ -45,8 +45,11 @@ type GinConfig struct {
 	// 启用异常http响应码Resolver 如果不指定则使用默认方式
 	BadHttpCodeResolver BadHttpCodeResolver
 
-	// 自定义全局中间件 作用于所有请求 按照顺序执行
-	GlobalMiddlewares []Middleware
+	// 自定义全局拦截器 按照顺序执行 作用于 业务路由执行前
+	GlobalPreInterceptors []PreInterceptor
+
+	// 自定义全局拦截器 按照顺序执行 作用于 业务路由执行后
+	GlobalPostInterceptors []PostInterceptor
 
 	// 响应数据的结构体解码器 默认为JSON方式解码
 	// 在使用NewRespRest响应结构体数据时解码为[]byte数据的解码器
@@ -148,21 +151,46 @@ func (g *GinStarter) Start() (interface{}, error) {
 		config.ResponseDataStructDecoder = responseJsonDataStructDecoder{}
 	}
 
-	if len(config.GlobalMiddlewares) > 0 {
-		for i := range config.GlobalMiddlewares {
-			middleware := config.GlobalMiddlewares[i]
-			if middleware != nil {
-				ginEngine.Use(func(ctx *gin.Context) {
-					response, continued := middleware(&Request{ctx: ctx})
+	if len(config.GlobalPreInterceptors) > 0 {
+		ginEngine.Use(func(ctx *gin.Context) {
+			for i := range config.GlobalPreInterceptors {
+				interceptor := config.GlobalPreInterceptors[i]
+				if interceptor != nil {
+					response, continued := interceptor(&Request{ctx: ctx})
 					if !continued {
 						httpResponse(ctx, response)
 						ctx.Abort()
-					} else {
-						ctx.Next()
+						return
 					}
-				})
+				}
 			}
-		}
+			ctx.Next()
+		})
+	}
+
+	if len(config.GlobalPostInterceptors) > 0 {
+		ginEngine.Use(func(ctx *gin.Context) {
+			ctx.Next()
+			for i := range config.GlobalPostInterceptors {
+				interceptor := config.GlobalPostInterceptors[i]
+				if interceptor != nil {
+					if ctx.IsAborted() {
+						return
+					}
+					response, exists := ctx.Get(GinCtxKeyResponse)
+					var continued bool
+					if !exists {
+						continued = interceptor(&Request{ctx: ctx}, nil)
+					} else {
+						continued = interceptor(&Request{ctx: ctx}, response.(Response))
+					}
+					if !continued {
+						ctx.Abort()
+						return
+					}
+				}
+			}
+		})
 	}
 
 	if len(config.Routers) > 0 {

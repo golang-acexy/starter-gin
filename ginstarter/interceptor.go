@@ -232,9 +232,9 @@ func responseRewriteHandler() gin.HandlerFunc {
 
 // 常用的一些中间件
 
-// BasicAuthMiddleware 基础权限校验中间件
+// BasicAuthInterceptor 基础权限校验中间件
 // match 满足指定条件才执行
-func BasicAuthMiddleware(account *BasicAuthAccount, match ...func(request *Request) bool) Middleware {
+func BasicAuthInterceptor(account *BasicAuthAccount, match ...func(request *Request) bool) PreInterceptor {
 	return func(request *Request) (Response, bool) {
 		if len(match) > 0 {
 			if !match[0](request) {
@@ -252,8 +252,8 @@ func BasicAuthMiddleware(account *BasicAuthAccount, match ...func(request *Reque
 	}
 }
 
-// MediaTypeMiddleware 类型校验中间件
-func MediaTypeMiddleware(contentType []string, match ...func(request *Request) bool) Middleware {
+// MediaTypeInterceptor ContentType校验中间件
+func MediaTypeInterceptor(contentType []string, match ...func(request *Request) bool) PreInterceptor {
 	return func(request *Request) (Response, bool) {
 		if len(match) > 0 {
 			if !match[0](request) {

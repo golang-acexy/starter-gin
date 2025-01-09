@@ -1,7 +1,6 @@
 package ginstarter
 
 import (
-	"net/http"
 	"time"
 )
 

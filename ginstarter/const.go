@@ -8,6 +8,9 @@ type BizErrorCode int
 type BizErrorMessage string
 
 const (
+	GinCtxKeyResponse = "_internal_response"
+)
+const (
 	StatusCodeSuccess            = http.StatusOK
 	StatusCodeServiceUnavailable = http.StatusServiceUnavailable
 	StatusCodeExceededLimit      = http.StatusTooManyRequests
