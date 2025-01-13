@@ -58,7 +58,7 @@ go get github.com/golang-acexy/starter-gin
     GroupPath string
   
     // 该Router下的中间件执行器
-    Middlewares []Middleware
+    Middlewares []PreInterceptor
   }
   ```
 
@@ -219,7 +219,7 @@ type GinStarter struct {
     BadHttpCodeResolver BadHttpCodeResolver
     
     // 自定义全局中间件 作用于所有请求 按照顺序执行
-    GlobalMiddlewares []Middleware
+    GlobalMiddlewares []PreInterceptor
     
     // 响应数据的结构体解码器 默认为JSON方式解码
     // 在使用NewRespRest响应结构体数据时解码为[]byte数据的解码器

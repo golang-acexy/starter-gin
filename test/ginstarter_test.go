@@ -82,20 +82,36 @@ func TestGinCustomer(t *testing.T) {
 			//	logger.Logrus().Errorln("Request catch exception", err)
 			//	return ginstarter.RespTextPlain("something error", http.StatusOK)
 			//},
-			GlobalMiddlewares: []ginstarter.Middleware{
+			GlobalPreInterceptors: []ginstarter.PreInterceptor{
 				func(request *ginstarter.Request) (ginstarter.Response, bool) {
 					t, _ := request.GetQueryParam("t")
 					if t == "" {
-						logger.Logrus().Infoln("中间件1 不继续执行 忽略其他中间件")
-						return ginstarter.RespTextPlain("middleware", http.StatusOK), false
+						logger.Logrus().Infoln("前置 不继续执行 忽略其他中间件")
+						return ginstarter.RespTextPlain("interceptor", http.StatusOK), false
 					} else {
-						logger.Logrus().Infoln("中间件1 继续执行 不忽略其他中间件")
-						return ginstarter.RespRestSuccess(), true
+						logger.Logrus().Infoln("前置 继续执行 不忽略其他中间件")
+						return nil, true
 					}
 				},
 				func(request *ginstarter.Request) (ginstarter.Response, bool) {
-					logger.Logrus().Infoln("middlewares 2 执行")
+					logger.Logrus().Infoln("前置 interceptor 2 执行")
 					return nil, true
+				},
+			},
+			GlobalPostInterceptors: []ginstarter.PostInterceptor{
+				func(request *ginstarter.Request, response ginstarter.Response) bool {
+					t, _ := request.GetQueryParam("t")
+					if t == "" {
+						logger.Logrus().Infoln("后置 不继续执行 忽略其他中间件")
+						return false
+					} else {
+						logger.Logrus().Infoln("后置 继续执行 不忽略其他中间件")
+						return false
+					}
+				},
+				func(request *ginstarter.Request, response ginstarter.Response) bool {
+					logger.Logrus().Infoln("后置 interceptor 2 执行")
+					return true
 				},
 			},
 		},

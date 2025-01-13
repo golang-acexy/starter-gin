@@ -80,7 +80,7 @@ func (d *ParamRouter) json() ginstarter.HandlerWrapper {
 		user := BodyJsonUser{}
 		request.MustBindBodyJson(&user)
 		fmt.Printf("%+v\n", user)
-		return ginstarter.RespRestSuccess(), nil
+		return ginstarter.RespRestSuccess(user), nil
 	}
 }
 

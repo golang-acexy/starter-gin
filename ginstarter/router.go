@@ -7,12 +7,12 @@ import (
 func registerRouter(g *gin.Engine, routers []Router) {
 	for _, v := range routers {
 		routerInfo := v.Info()
-		if len(routerInfo.Middlewares) > 0 {
+		if len(routerInfo.Interceptors) > 0 {
 			group := g.Group(routerInfo.GroupPath)
-			for i := range routerInfo.Middlewares {
-				middleware := routerInfo.Middlewares[i]
+			for i := range routerInfo.Interceptors {
+				interceptor := routerInfo.Interceptors[i]
 				group.Use(func(ctx *gin.Context) {
-					response, continued := middleware(&Request{ctx: ctx})
+					response, continued := interceptor(&Request{ctx: ctx})
 					if !continued {
 						httpResponse(ctx, response)
 						ctx.Abort()

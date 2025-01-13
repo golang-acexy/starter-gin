@@ -3,6 +3,7 @@ package ginstarter
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"github.com/acexy/golang-toolkit/logger"
 	"github.com/acexy/golang-toolkit/sys"
 	"github.com/gin-gonic/gin"
@@ -25,7 +26,7 @@ type RouterInfo struct {
 	GroupPath string
 
 	// 该Router下的中间件执行器
-	Middlewares []Middleware
+	Interceptors []PreInterceptor
 }
 
 // RouterWrapper 定义路由包装器
@@ -138,6 +139,7 @@ func (r *RouterWrapper) handler(methods []string, path string, contentType []str
 }
 
 func httpResponse(context *gin.Context, response Response) {
+	context.Set(GinCtxKeyResponse, response)
 
 	// 是否启用traceId响应
 	if ginConfig.EnableGoroutineTraceIdResponse && sys.IsEnabledLocalTraceId() {
@@ -331,4 +333,12 @@ func (r *ResponseData) AddCookie(cookie *ResponseCookie) *ResponseData {
 	return r
 }
 
-type Middleware func(request *Request) (Response, bool)
+func (r *ResponseData) ToDebugString() string {
+	return fmt.Sprintf("body: %s head: %v content-type: %s", string(r.data), r.headers, r.contentType)
+}
+
+// PreInterceptor 前置拦截器
+type PreInterceptor func(request *Request) (Response, bool)
+
+// PostInterceptor 后置拦截器
+type PostInterceptor func(request *Request, response Response) bool

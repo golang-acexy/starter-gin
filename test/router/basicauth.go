@@ -10,8 +10,8 @@ func (a *BasicAuthRouter) Info() *ginstarter.RouterInfo {
 		GroupPath: "auth",
 
 		// 为该路由添加中间件
-		Middlewares: []ginstarter.Middleware{
-			ginstarter.BasicAuthMiddleware(&ginstarter.BasicAuthAccount{
+		Interceptors: []ginstarter.PreInterceptor{
+			ginstarter.BasicAuthInterceptor(&ginstarter.BasicAuthAccount{
 				Username: "acexy",
 				Password: "acexy",
 			}),
