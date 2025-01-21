@@ -29,6 +29,22 @@ type RestRespStruct struct {
 	Data any `json:"data"`
 }
 
+// IsSuccess 判断RestRespStruct是否为成功状态 (200状态码，且不包含任何业务错误码)
+func (r *RestRespStruct) IsSuccess() bool {
+	if r.Status != nil {
+		return r.Status.StatusCode == StatusCodeSuccess && r.Status.BizErrorCode == nil
+	}
+	return false
+}
+
+// IsSuccessWithData 判断RestRespStruct是否为成功状态 (200状态码，且不包含任何业务错误码，且包含响应数据)
+func (r *RestRespStruct) IsSuccessWithData() bool {
+	if r.Status != nil {
+		return r.Status.StatusCode == StatusCodeSuccess && r.Status.BizErrorCode == nil && r.Data != nil
+	}
+	return false
+}
+
 // NewRestSuccess 响应标准成功Rest结构体
 func NewRestSuccess(data ...interface{}) *RestRespStruct {
 	result := RestRespStruct{
