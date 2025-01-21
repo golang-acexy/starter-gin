@@ -180,7 +180,7 @@ func (g *GinStarter) Start() (interface{}, error) {
 					response, exists := ctx.Get(GinCtxKeyResponse)
 					var continued bool
 					if !exists {
-						continued = interceptor(&Request{ctx: ctx}, nil)
+						continued = interceptor(&Request{ctx: ctx}, NewCommonResp())
 					} else {
 						continued = interceptor(&Request{ctx: ctx}, response.(Response))
 					}
