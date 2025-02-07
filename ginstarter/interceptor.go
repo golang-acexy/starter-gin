@@ -12,6 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"net/http"
+	"runtime/debug"
 	"strings"
 	"time"
 )
@@ -124,7 +125,21 @@ func panicToError(panicError any) (statusCode int, err error, internalError bool
 			err = fmt.Errorf("%v", t)
 		}
 	}
-	logger.Logrus().Errorf("panic: %v", err)
+	if !internalError {
+		stack := string(debug.Stack())
+		lines := strings.Split(stack, "\n")
+		index := coll.SliceAnyIndexOf(lines, func(line string) bool {
+			return strings.Contains(line, "runtime/panic.go")
+		})
+		filter := lines[index:]
+		index = coll.SliceAnyIndexOf(filter, func(line string) bool {
+			return strings.Contains(line, "ginstarter/wrapper.go")
+		})
+		stack = strings.Join(filter[:index], "\n")
+		logger.Logrus().Errorf("panic: %v %s", err, stack)
+	} else {
+		logger.Logrus().Errorf("panic: %v", err)
+	}
 	return
 }
 
@@ -134,7 +149,6 @@ func recoverHandler() gin.HandlerFunc {
 		// panic异常处理
 		defer func() {
 			if panicError := recover(); panicError != nil {
-
 				var errMsg string
 				// 将panic异常进行转换
 				status, err, internalError := panicToError(panicError)
