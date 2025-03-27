@@ -25,6 +25,7 @@ func (d *ParamRouter) Handlers(router *ginstarter.RouterWrapper) {
 	router.POST("body/json", d.json())
 	// demo path /param/body/form    body > id=1&name=acexy
 	router.POST("body/form", d.form())
+	router.GET("bind-query", d.bindQuery())
 }
 
 type UriPathUser struct {
@@ -88,6 +89,15 @@ func (d *ParamRouter) form() ginstarter.HandlerWrapper {
 	return func(request *ginstarter.Request) (ginstarter.Response, error) {
 		user := BodyFormUser{}
 		request.MustBindBodyForm(&user)
+		fmt.Printf("%+v\n", user)
+		return ginstarter.RespRestSuccess(), nil
+	}
+}
+
+func (d *ParamRouter) bindQuery() ginstarter.HandlerWrapper {
+	return func(request *ginstarter.Request) (ginstarter.Response, error) {
+		user := BodyFormUser{}
+		request.MustBindQueryParams(&user)
 		fmt.Printf("%+v\n", user)
 		return ginstarter.RespRestSuccess(), nil
 	}
