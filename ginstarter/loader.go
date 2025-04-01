@@ -8,11 +8,9 @@ import (
 	"github.com/golang-acexy/starter-parent/parent"
 	"github.com/sirupsen/logrus"
 	"net/http"
-	"sync"
 	"time"
 )
 
-var once sync.Once
 var server *http.Server
 var ginEngine *gin.Engine
 var ginConfig *GinConfig
@@ -84,14 +82,14 @@ type GinStarter struct {
 
 // 获取配置信息
 func (g *GinStarter) getConfig() *GinConfig {
-	once.Do(func() {
+	if ginConfig == nil {
 		if g.LazyConfig != nil {
 			config := g.LazyConfig()
 			ginConfig = &config
 		} else {
 			ginConfig = &g.Config
 		}
-	})
+	}
 	return ginConfig
 }
 
