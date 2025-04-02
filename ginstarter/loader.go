@@ -71,26 +71,27 @@ type GinConfig struct {
 }
 
 type GinStarter struct {
-
 	// GinConfig 配置
 	Config GinConfig
 	// 懒加载函数，用于在实际执行时动态获取配置 该权重高于Config的直接配置
 	LazyConfig func() GinConfig
+	config     *GinConfig
 	// 自定义Gin模块的组件属性
 	GinSetting *parent.Setting
 }
 
 // 获取配置信息
 func (g *GinStarter) getConfig() *GinConfig {
-	if ginConfig == nil {
+	if g.config == nil {
 		if g.LazyConfig != nil {
 			config := g.LazyConfig()
-			ginConfig = &config
+			g.config = &config
 		} else {
-			ginConfig = &g.Config
+			g.config = &g.Config
 		}
+		ginConfig = g.config
 	}
-	return ginConfig
+	return g.config
 }
 
 func (g *GinStarter) Setting() *parent.Setting {
