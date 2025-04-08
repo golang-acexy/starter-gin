@@ -6,6 +6,7 @@ import (
 	"github.com/acexy/golang-toolkit/util/net"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-acexy/starter-parent/parent"
+	"github.com/libp2p/go-reuseport"
 	"github.com/sirupsen/logrus"
 	"net/http"
 	"time"
@@ -25,6 +26,10 @@ type GinConfig struct {
 
 	// * 注册服务监听地址 :8080 (默认)
 	ListenAddress string // ip:port
+
+	// 启用ReusePortModel 使用 SO_REUSEPORT 实现 多个进程监听同一端口，基于操作系统内核实现负载均衡
+	// 该功能受操作系统影响 win可能不支持， mac 只支持端口复用不能负载 linux支持负载加复用
+	UseReusePortModel bool
 
 	// 默认情况系统会将捕获的异常详细发给PanicResolver处理，如果不想将细节暴露向外
 	// 方案 1. 启用隐藏异常细节功能，系统将在触发panic重要错误时不再调用PanicResolver处理，并统一响应500错误
@@ -207,8 +212,19 @@ func (g *GinStarter) Start() (interface{}, error) {
 
 	errChn := make(chan error)
 	go func() {
-		if err = server.ListenAndServe(); err != nil {
-			errChn <- err
+		if config.UseReusePortModel {
+			listener, err := reuseport.Listen("tcp", config.ListenAddress)
+			if err != nil {
+				errChn <- err
+			} else {
+				if err = server.Serve(listener); err != nil {
+					errChn <- err
+				}
+			}
+		} else {
+			if err = server.ListenAndServe(); err != nil {
+				errChn <- err
+			}
 		}
 	}()
 

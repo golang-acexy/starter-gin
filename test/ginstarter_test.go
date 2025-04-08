@@ -22,8 +22,10 @@ func TestGinDefault(t *testing.T) {
 	sys.EnableLocalTraceId(nil)
 	starterLoader = parent.NewStarterLoader([]parent.Starter{
 		&ginstarter.GinStarter{
-			Config: ginstarter.GinConfig{ListenAddress: ":8080",
-				DebugModule: true,
+			Config: ginstarter.GinConfig{
+				ListenAddress:     ":8080",
+				UseReusePortModel: true,
+				DebugModule:       true,
 				Routers: []ginstarter.Router{
 					&router.DemoRouter{},
 					&router.ParamRouter{},
@@ -57,8 +59,10 @@ func TestGinDefault(t *testing.T) {
 // 自定义panic异常响应
 func TestGinCustomer(t *testing.T) {
 	starter := &ginstarter.GinStarter{
-		Config: ginstarter.GinConfig{ListenAddress: ":8080",
-			DebugModule: true,
+		Config: ginstarter.GinConfig{
+			ListenAddress:     ":8080",
+			UseReusePortModel: true,
+			DebugModule:       true,
 			Routers: []ginstarter.Router{
 				&router.DemoRouter{},
 				&router.ParamRouter{},
@@ -78,10 +82,6 @@ func TestGinCustomer(t *testing.T) {
 			//DisableBadHttpCodeResolver: true,
 			//DisableDefaultIgnoreHttpCode: true,
 			DisableMethodNotAllowedError: false,
-			//PanicResolver: func(ctx *gin.Context, err error) ginstarter.Response {
-			//	logger.Logrus().Errorln("Request catch exception", err)
-			//	return ginstarter.RespTextPlain("something error", http.StatusOK)
-			//},
 			GlobalPreInterceptors: []ginstarter.PreInterceptor{
 				func(request *ginstarter.Request) (ginstarter.Response, bool) {
 					t, _ := request.GetQueryParam("t")
