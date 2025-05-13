@@ -139,7 +139,7 @@ func (r *RouterWrapper) handler(methods []string, path string, contentType []str
 }
 
 func httpResponse(context *gin.Context, response Response) {
-	context.Set(GinCtxKeyResponse, response)
+	context.Set(ginCtxKeyResponse, response)
 
 	// 是否启用traceId响应
 	if ginConfig.EnableGoroutineTraceIdResponse && sys.IsEnabledLocalTraceId() {

@@ -181,7 +181,7 @@ func (g *GinStarter) Start() (interface{}, error) {
 					if ctx.IsAborted() {
 						return
 					}
-					response, exists := ctx.Get(GinCtxKeyResponse)
+					response, exists := ctx.Get(ginCtxKeyResponse)
 					var continued bool
 					if !exists {
 						continued = interceptor(&Request{ctx: ctx}, NewCommonResp())

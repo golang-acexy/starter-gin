@@ -8,7 +8,7 @@ type BizErrorCode int
 type BizErrorMessage string
 
 const (
-	GinCtxKeyResponse = "_internal_response"
+	ginCtxKeyResponse = "_internal_response"
 )
 const (
 	StatusCodeSuccess            = http.StatusOK
