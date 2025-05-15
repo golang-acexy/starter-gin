@@ -3,6 +3,7 @@ package ginstarter
 import (
 	"context"
 	"github.com/acexy/golang-toolkit/logger"
+	"github.com/acexy/golang-toolkit/util/coll"
 	"github.com/acexy/golang-toolkit/util/net"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-acexy/starter-parent/parent"
@@ -181,7 +182,7 @@ func (g *GinStarter) Start() (interface{}, error) {
 					if ctx.IsAborted() {
 						return
 					}
-					response, exists := ctx.Get(GinCtxKeyResponse)
+					response, exists := ctx.Get(ginCtxKeyResponse)
 					var continued bool
 					if !exists {
 						continued = interceptor(&Request{ctx: ctx}, NewCommonResp())
@@ -198,6 +199,9 @@ func (g *GinStarter) Start() (interface{}, error) {
 	}
 
 	if len(config.Routers) > 0 {
+		config.Routers = coll.SliceFilter(config.Routers, func(v Router) bool {
+			return v != nil
+		})
 		registerRouter(ginEngine, config.Routers)
 	}
 
