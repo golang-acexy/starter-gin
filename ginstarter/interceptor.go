@@ -68,6 +68,17 @@ var (
 	}
 )
 
+type BasicAuthAccount struct {
+	Username string
+	Password string
+}
+
+// 定义内部panic 用于特殊处理 中断请求流程
+type internalPanic struct {
+	statusCode int
+	rawError   error
+}
+
 // PreInterceptor 前置拦截器
 type PreInterceptor func(request *Request) (response Response, continuePreInterceptor bool, continueHandler bool)
 
