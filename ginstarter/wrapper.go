@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/acexy/golang-toolkit/logger"
 	"github.com/acexy/golang-toolkit/sys"
+	"github.com/acexy/golang-toolkit/util/coll"
 	"github.com/gin-gonic/gin"
 	"net/http"
 )
@@ -25,8 +26,10 @@ type RouterInfo struct {
 	// GroupPath 路由分组路径
 	GroupPath string
 
-	// 该Router下的中间件执行器
-	Interceptors []PreInterceptor
+	// 该Router下的前置拦截器
+	PreInterceptors []PreInterceptor
+	// 该Router下的后置拦截器
+	PostInterceptors []PostInterceptor
 }
 
 // RouterWrapper 定义路由包装器
@@ -40,7 +43,6 @@ type HandlerWrapper func(request *Request) (Response, error)
 type Router interface {
 	// Info 定义路由信息
 	Info() *RouterInfo
-
 	// Handlers 注册处理器
 	Handlers(router *RouterWrapper)
 }
@@ -108,6 +110,10 @@ func (r *RouterWrapper) handler(methods []string, path string, contentType []str
 	handlers := make([]gin.HandlerFunc, len(handlerWrapper))
 	for i, handler := range handlerWrapper {
 		handlers[i] = func(context *gin.Context) {
+			v, exists := context.Get(ginCtxKeyContinueHandler)
+			if exists && !v.(bool) {
+				return
+			}
 
 			if context.IsAborted() {
 				logger.Logrus().Warning("Request is aborted")
@@ -139,7 +145,7 @@ func (r *RouterWrapper) handler(methods []string, path string, contentType []str
 }
 
 func httpResponse(context *gin.Context, response Response) {
-	context.Set(ginCtxKeyResponse, response)
+	context.Set(ginCtxKeyCurrentResponse, response)
 
 	// 是否启用traceId响应
 	if ginConfig.EnableGoroutineTraceIdResponse && sys.IsEnabledLocalTraceId() {
@@ -185,6 +191,10 @@ func httpResponse(context *gin.Context, response Response) {
 
 	data := responseData.data
 	if len(data) > 0 {
+		writer := context.Writer
+		if w, ok := writer.(*responseRewriter); ok {
+			w.Rest() // 重置响应体
+		}
 		context.Data(httpStatusCode, contentType, data)
 	}
 }
@@ -212,6 +222,12 @@ func (r *responseRewriter) WriteHeaderNow() {
 
 func (r *responseRewriter) Status() int {
 	return r.statusCode
+}
+
+func (r *responseRewriter) Rest() {
+	if r.body.Len() > 0 {
+		r.body.Reset()
+	}
 }
 
 // ResponseData 标准响应数据内容
@@ -337,8 +353,68 @@ func (r *ResponseData) ToDebugString() string {
 	return fmt.Sprintf("body: %s head: %v content-type: %s", string(r.data), r.headers, r.contentType)
 }
 
-// PreInterceptor 前置拦截器
-type PreInterceptor func(request *Request) (Response, bool)
+func registerRouter(ginEngine *gin.Engine, routers []Router) {
+	for _, router := range routers {
+		routerInfo := router.Info()
+		group := ginEngine.Group(routerInfo.GroupPath)
 
-// PostInterceptor 后置拦截器
-type PostInterceptor func(request *Request, response Response) bool
+		routerInfo.PreInterceptors = coll.SliceFilter(routerInfo.PreInterceptors, func(p PreInterceptor) bool {
+			return p != nil
+		})
+		routerInfo.PostInterceptors = coll.SliceFilter(routerInfo.PostInterceptors, func(p PostInterceptor) bool {
+			return p != nil
+		})
+
+		if len(routerInfo.PreInterceptors) != 0 && len(routerInfo.PostInterceptors) != 0 {
+			if len(routerInfo.PreInterceptors) > 0 {
+				group.Use(func(ctx *gin.Context) {
+					// 有group级别的前置拦截器
+					for i := range routerInfo.PreInterceptors {
+						response, continuePreInterceptor, continueHandler := routerInfo.PreInterceptors[i](&Request{ctx: ctx})
+						ctx.Set(ginCtxKeyContinueHandler, continueHandler)
+						if response != nil {
+							httpResponse(ctx, response)
+						}
+						if continuePreInterceptor {
+							continue
+						} else {
+							break
+						}
+					}
+					ctx.Next()
+				})
+			}
+			group.Use(func(ctx *gin.Context) {
+				v, exists := ctx.Get(ginCtxKeyContinueHandler)
+				if !exists || v.(bool) {
+					ctx.Next()
+				}
+				if len(routerInfo.PostInterceptors) > 0 {
+					var response Response
+					var newResponse Response
+					var continuePostInterceptor bool
+					currentResponse, exists := ctx.Get(ginCtxKeyCurrentResponse)
+					if exists && currentResponse != nil {
+						response = currentResponse.(Response)
+					}
+					for i := range routerInfo.PostInterceptors {
+						interceptor := routerInfo.PostInterceptors[i]
+						newResponse, continuePostInterceptor = interceptor(&Request{ctx: ctx}, response)
+						if newResponse != nil {
+							response = newResponse
+						}
+						if continuePostInterceptor {
+							continue
+						}
+						break
+					}
+					if response != nil {
+						httpResponse(ctx, response)
+					}
+				}
+			})
+
+		}
+		router.Handlers(&RouterWrapper{routerGroup: ginEngine.Group(routerInfo.GroupPath)})
+	}
+}

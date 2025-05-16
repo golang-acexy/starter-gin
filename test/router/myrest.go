@@ -1,7 +1,7 @@
 package router
 
 import (
-	"github.com/acexy/golang-toolkit/util/json"
+	"github.com/acexy/golang-toolkit/logger"
 	"github.com/golang-acexy/starter-gin/ginstarter"
 )
 
@@ -30,6 +30,7 @@ func (m *MyRestRouter) Handlers(router *ginstarter.RouterWrapper) {
 // 使用框架自带的Rest响应默认Rest结构体
 func (m *MyRestRouter) m1() ginstarter.HandlerWrapper {
 	return func(request *ginstarter.Request) (ginstarter.Response, error) {
+		logger.Logrus().Info("invoke m1")
 		return ginstarter.RespRestSuccess("data part"), nil
 	}
 }
@@ -55,18 +56,12 @@ func (m *MyRestRouter) m3() ginstarter.HandlerWrapper {
 }
 
 type MyRestResponse struct {
-	responseData *ginstarter.ResponseData
 }
 
 func (m *MyRestResponse) Data() *ginstarter.ResponseData {
-	return m.responseData
+	return ginstarter.NewEmptyResponseData()
 }
 
 func (m *MyRestResponse) setData(data any) {
-	m.responseData = ginstarter.NewEmptyResponseData()
-	m.responseData.SetData(json.ToJsonBytes(&RestStruct{
-		Code: 200,
-		Msg:  "success",
-		Data: data,
-	}))
+
 }

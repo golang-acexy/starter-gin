@@ -68,6 +68,12 @@ var (
 	}
 )
 
+// PreInterceptor 前置拦截器
+type PreInterceptor func(request *Request) (response Response, continuePreInterceptor bool, continueHandler bool)
+
+// PostInterceptor 后置拦截器
+type PostInterceptor func(request *Request, response Response) (newResponse Response, continuePostInterceptor bool)
+
 type PanicResolver func(err error) string
 type BadHttpCodeResolver func(httpStatusCode int, errMsg string) Response
 
@@ -135,7 +141,14 @@ func panicToError(panicError any) (statusCode int, err error, internalError bool
 		index = coll.SliceAnyIndexOf(filter, func(line string) bool {
 			return strings.Contains(line, "ginstarter/wrapper.go")
 		})
-		stack = strings.Join(filter[:index], "\n")
+		if index != -1 {
+			index = coll.SliceAnyIndexOf(filter, func(line string) bool {
+				return strings.Contains(line, "ginstarter/interceptor.go")
+			})
+			if index != -1 {
+				stack = strings.Join(filter[:index], "\n")
+			}
+		}
 		logger.Logrus().Errorf("panic: %v %s", err, stack)
 	} else {
 		logger.Logrus().Errorf("panic: %v", err)
@@ -249,39 +262,39 @@ func responseRewriteHandler() gin.HandlerFunc {
 // BasicAuthInterceptor 基础权限校验中间件
 // match 满足指定条件才执行
 func BasicAuthInterceptor(account *BasicAuthAccount, match ...func(request *Request) bool) PreInterceptor {
-	return func(request *Request) (Response, bool) {
+	return func(request *Request) (Response, bool, bool) {
 		if len(match) > 0 {
 			if !match[0](request) {
-				return nil, true
+				return nil, true, true
 			}
 		}
 		if request.GetHeader("Authorization") == "" {
-			return RespAbortWithHttpStatusCode(http.StatusUnauthorized), false
+			return RespAbortWithHttpStatusCode(http.StatusUnauthorized), false, false
 		}
 		enc := "Basic " + base64.StdEncoding.EncodeToString(conversion.ParseBytes(account.Username+":"+account.Password))
 		if request.GetHeader("Authorization") != enc {
-			return RespAbortWithHttpStatusCode(http.StatusUnauthorized), false
+			return RespAbortWithHttpStatusCode(http.StatusUnauthorized), false, false
 		}
-		return nil, true
+		return nil, true, true
 	}
 }
 
 // MediaTypeInterceptor ContentType校验中间件
 func MediaTypeInterceptor(contentType []string, match ...func(request *Request) bool) PreInterceptor {
-	return func(request *Request) (Response, bool) {
+	return func(request *Request) (Response, bool, bool) {
 		if len(match) > 0 {
 			if !match[0](request) {
-				return nil, true
+				return nil, true, true
 			}
 		}
 		if len(contentType) > 0 {
 			if !isMatchMediaType(contentType, request.GetHeader("Content-Type")) {
-				return RespAbortWithHttpStatusCode(http.StatusUnsupportedMediaType), false
+				return RespAbortWithHttpStatusCode(http.StatusUnsupportedMediaType), false, false
 			}
 		} else {
 			logger.Logrus().Warningln("valid Content-Type restriction not set")
 		}
-		return nil, true
+		return nil, true, true
 	}
 }
 

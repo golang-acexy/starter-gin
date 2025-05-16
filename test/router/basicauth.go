@@ -10,7 +10,7 @@ func (a *BasicAuthRouter) Info() *ginstarter.RouterInfo {
 		GroupPath: "auth",
 
 		// 为该路由添加中间件
-		Interceptors: []ginstarter.PreInterceptor{
+		PreInterceptors: []ginstarter.PreInterceptor{
 			ginstarter.BasicAuthInterceptor(&ginstarter.BasicAuthAccount{
 				Username: "acexy",
 				Password: "acexy",
