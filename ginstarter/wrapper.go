@@ -114,12 +114,10 @@ func (r *RouterWrapper) handler(methods []string, path string, contentType []str
 			if exists && !v.(bool) {
 				return
 			}
-
 			if context.IsAborted() {
 				logger.Logrus().Warning("Request is aborted")
 				return
 			}
-
 			if len(contentType) > 0 {
 				if !isMatchMediaType(contentType, context.ContentType()) {
 					panic(&internalPanic{
@@ -128,12 +126,11 @@ func (r *RouterWrapper) handler(methods []string, path string, contentType []str
 					})
 				}
 			}
-
 			response, err := handler(&Request{context})
 			if err != nil {
+				response.Data().SetStatusCode(http.StatusInternalServerError)
 				panic(err)
 			}
-
 			if response != nil {
 				httpResponse(context, response)
 			} else {
@@ -145,19 +142,14 @@ func (r *RouterWrapper) handler(methods []string, path string, contentType []str
 }
 
 func httpResponse(context *gin.Context, response Response) {
+	if response == nil {
+		return
+	}
 	context.Set(ginCtxKeyCurrentResponse, response)
 
 	// 是否启用traceId响应
 	if ginConfig.EnableGoroutineTraceIdResponse && sys.IsEnabledLocalTraceId() {
 		context.Header("Trace-Id", sys.GetLocalTraceId())
-	}
-
-	// 如果是普通响应 判断是否使用了gin原始响应功能
-	if instance, ok := response.(*commonResp); ok {
-		if instance.ginFn != nil {
-			instance.ginFn(context)
-			return
-		}
 	}
 
 	responseData := response.Data()
@@ -196,6 +188,9 @@ func httpResponse(context *gin.Context, response Response) {
 			w.Rest() // 重置响应体
 		}
 		context.Data(httpStatusCode, contentType, data)
+		if context.ContentType() != contentType {
+			context.Header("Content-Type", contentType)
+		}
 	}
 }
 
@@ -365,7 +360,7 @@ func registerRouter(ginEngine *gin.Engine, routers []Router) {
 			return p != nil
 		})
 
-		if len(routerInfo.PreInterceptors) != 0 && len(routerInfo.PostInterceptors) != 0 {
+		if len(routerInfo.PreInterceptors) != 0 || len(routerInfo.PostInterceptors) != 0 {
 			if len(routerInfo.PreInterceptors) > 0 {
 				group.Use(func(ctx *gin.Context) {
 					// 有group级别的前置拦截器
@@ -413,8 +408,7 @@ func registerRouter(ginEngine *gin.Engine, routers []Router) {
 					}
 				}
 			})
-
 		}
-		router.Handlers(&RouterWrapper{routerGroup: ginEngine.Group(routerInfo.GroupPath)})
+		router.Handlers(&RouterWrapper{routerGroup: group})
 	}
 }

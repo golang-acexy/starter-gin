@@ -193,8 +193,9 @@ func recoverHandler() gin.HandlerFunc {
 				var response Response
 				if !ginConfig.DisableBadHttpCodeResolver {
 					response = ginConfig.BadHttpCodeResolver(statusCode, errMsg)
+					ctx.Writer.Header().Set("Content-Type", gin.MIMEJSON)
 				} else {
-					response = RespTextPlain(errMsg, statusCode)
+					response = RespTextPlain([]byte(errMsg), statusCode)
 				}
 				httpResponse(ctx, response)
 				if rewriter != nil {
@@ -269,11 +270,11 @@ func BasicAuthInterceptor(account *BasicAuthAccount, match ...func(request *Requ
 			}
 		}
 		if request.GetHeader("Authorization") == "" {
-			return RespAbortWithHttpStatusCode(http.StatusUnauthorized), false, false
+			return RespHttpStatusCode(http.StatusUnauthorized), false, false
 		}
 		enc := "Basic " + base64.StdEncoding.EncodeToString(conversion.ParseBytes(account.Username+":"+account.Password))
 		if request.GetHeader("Authorization") != enc {
-			return RespAbortWithHttpStatusCode(http.StatusUnauthorized), false, false
+			return RespHttpStatusCode(http.StatusUnauthorized), false, false
 		}
 		return nil, true, true
 	}
@@ -289,7 +290,7 @@ func MediaTypeInterceptor(contentType []string, match ...func(request *Request) 
 		}
 		if len(contentType) > 0 {
 			if !isMatchMediaType(contentType, request.GetHeader("Content-Type")) {
-				return RespAbortWithHttpStatusCode(http.StatusUnsupportedMediaType), false, false
+				return RespHttpStatusCode(http.StatusUnsupportedMediaType), false, false
 			}
 		} else {
 			logger.Logrus().Warningln("valid Content-Type restriction not set")

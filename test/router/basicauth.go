@@ -25,6 +25,6 @@ func (a *BasicAuthRouter) Handlers(router *ginstarter.RouterWrapper) {
 
 func (a *BasicAuthRouter) invoke() ginstarter.HandlerWrapper {
 	return func(request *ginstarter.Request) (ginstarter.Response, error) {
-		return ginstarter.RespTextPlain("request auth success"), nil
+		return ginstarter.RespTextPlain([]byte("request auth success")), nil
 	}
 }

@@ -74,7 +74,7 @@ func (d *DemoRouter) hold() ginstarter.HandlerWrapper {
 	return func(request *ginstarter.Request) (ginstarter.Response, error) {
 		fmt.Println("invoke")
 		time.Sleep(time.Second * 5)
-		return ginstarter.RespTextPlain("text"), nil
+		return ginstarter.RespTextPlain([]byte("text")), nil
 	}
 }
 
@@ -86,7 +86,8 @@ func (d *DemoRouter) empty() ginstarter.HandlerWrapper {
 
 func (d *DemoRouter) redirect() ginstarter.HandlerWrapper {
 	return func(request *ginstarter.Request) (ginstarter.Response, error) {
-		return ginstarter.RespRedirect("https://google.com"), nil
+		request.RawGinContext().Redirect(http.StatusMovedPermanently, "https://google.com")
+		return nil, nil
 	}
 }
 
