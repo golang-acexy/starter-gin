@@ -39,8 +39,11 @@ func registerRouter(ginEngine *gin.Engine, routers []Router) {
 				group.Use(func(ctx *gin.Context) {
 					// 有group级别的前置拦截器
 					for i := range routerInfo.PreInterceptors {
+						currentHandler, ok := ctx.Get(ginCtxKeyContinueHandler)
 						response, continuePreInterceptor, continueHandler := routerInfo.PreInterceptors[i](&Request{ctx: ctx})
-						ctx.Set(ginCtxKeyContinueHandler, continueHandler)
+						if !(ok && !currentHandler.(bool)) {
+							ctx.Set(ginCtxKeyContinueHandler, continueHandler)
+						}
 						if response != nil {
 							httpResponse(ctx, response)
 						}

@@ -80,6 +80,7 @@ type internalPanic struct {
 }
 
 // PreInterceptor 前置拦截器
+// 任意一个拦截器返回continueHandler=false都将阻止handler执行
 type PreInterceptor func(request *Request) (response Response, continuePreInterceptor bool, continueHandler bool)
 
 // PostInterceptor 后置拦截器

@@ -168,7 +168,10 @@ func (g *GinStarter) Start() (interface{}, error) {
 			for i := range config.GlobalPreInterceptors {
 				interceptor := config.GlobalPreInterceptors[i]
 				response, continuePreInterceptor, continueHandler := interceptor(&Request{ctx: ctx})
-				ctx.Set(ginCtxKeyContinueHandler, continueHandler)
+				currentHandler, ok := ctx.Get(ginCtxKeyContinueHandler)
+				if !(ok && !currentHandler.(bool)) {
+					ctx.Set(ginCtxKeyContinueHandler, continueHandler)
+				}
 				if response != nil {
 					httpResponse(ctx, response)
 				}
