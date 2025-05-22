@@ -2,6 +2,8 @@ github.com/acexy/golang-toolkit v0.0.45 h1:dT9NYYgK3alOzJzBh1SkeNksBSFklJB7XdrwF
 github.com/acexy/golang-toolkit v0.0.45/go.mod h1:PeEv7vAjBD2sa+xAxgEuWL4+Km92Ox2tYjaTigPEbNE=
 github.com/acexy/golang-toolkit v0.0.46 h1:U4c8roDDAfb4sz0QtDLkr+Rlhk4uL9Iggdycsx1QsSk=
 github.com/acexy/golang-toolkit v0.0.46/go.mod h1:PeEv7vAjBD2sa+xAxgEuWL4+Km92Ox2tYjaTigPEbNE=
+github.com/acexy/golang-toolkit v0.0.47 h1:dZ5nI7Rveo6sGxZm67CgznMS6Rk1LHLPy5++LjyLbzs=
+github.com/acexy/golang-toolkit v0.0.47/go.mod h1:wzVojaNt2RZPsFMU3q7+c5WqhiS73jAC5gcglTcLfN8=
 github.com/bytedance/sonic v1.13.2 h1:8/H1FempDZqC4VqjptGo14QQlJx8VdZJegxs6wwfqpQ=
 github.com/bytedance/sonic v1.13.2/go.mod h1:o68xyaF9u2gvVBuGHPlUVCy+ZfmNNO5ETf1+KgkJhz4=
 github.com/bytedance/sonic/loader v0.1.1/go.mod h1:ncP89zfokxS5LZrJxl5z0UJcsk4M4yY2JpfqGeCtNLU=
@@ -19,6 +21,8 @@ github.com/gin-contrib/sse v1.1.0 h1:n0w2GMuUpWDVp7qSpvze6fAu9iRxJY4Hmj6AmBOU05w
 github.com/gin-contrib/sse v1.1.0/go.mod h1:hxRZ5gVpWMT7Z0B0gSNYqqsSCNIJMjzvm6fqCz9vjwM=
 github.com/gin-gonic/gin v1.10.0 h1:nTuyha1TYqgedzytsKYqna+DfLos46nTv2ygFy86HFU=
 github.com/gin-gonic/gin v1.10.0/go.mod h1:4PMNQiOhvDRa013RKVbsiNwoyezlm2rm0uX/T7kzp5Y=
+github.com/gin-gonic/gin v1.10.1 h1:T0ujvqyCSqRopADpgPgiTT63DUQVSfojyME59Ei63pQ=
+github.com/gin-gonic/gin v1.10.1/go.mod h1:4PMNQiOhvDRa013RKVbsiNwoyezlm2rm0uX/T7kzp5Y=
 github.com/go-playground/assert/v2 v2.2.0 h1:JvknZsQTYeFEAhQwI4qEt9cyV5ONwRHC+lYKSsYSR8s=
 github.com/go-playground/assert/v2 v2.2.0/go.mod h1:VDjEfimB/XKnb+ZQfWdccd7VUvScMdVu0Titje2rxJ4=
 github.com/go-playground/locales v0.14.1 h1:EWaQ/wswjilfKLTECiXz7Rh+3BjFhfDFKv/oXslEjJA=
