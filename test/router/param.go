@@ -2,6 +2,7 @@ package router
 
 import (
 	"fmt"
+	"github.com/acexy/golang-toolkit/logger"
 	"github.com/golang-acexy/starter-gin/ginstarter"
 )
 
@@ -11,11 +12,22 @@ type ParamRouter struct {
 func (d *ParamRouter) Info() *ginstarter.RouterInfo {
 	return &ginstarter.RouterInfo{
 		GroupPath: "param",
+		PreInterceptors: []ginstarter.PreInterceptor{func(request *ginstarter.Request) (response ginstarter.Response, continuePreInterceptor bool, continueHandler bool) {
+			logger.Logrus().Infoln("group interceptor invoke")
+			return ginstarter.RespTextPlain([]byte("hello world"), 200), true, false
+		}},
+		PostInterceptors: []ginstarter.PostInterceptor{
+			func(request *ginstarter.Request, response ginstarter.Response) (newResponse ginstarter.Response, continuePostInterceptor bool) {
+				if response != nil {
+					fmt.Println(response.Data().ToDebugString())
+				}
+				return ginstarter.NewRespRest().SetDataResponse("ok"), true
+			},
+		},
 	}
 }
 
 func (d *ParamRouter) Handlers(router *ginstarter.RouterWrapper) {
-
 	router.POST1("json", []string{"application-json"}, d.json())
 	// demo path /param/uri-path/101/acexy
 	router.GET("uri-path/:id/:name", d.path())

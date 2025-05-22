@@ -16,6 +16,10 @@ import (
 
 var starterLoader *parent.StarterLoader
 
+func init() {
+	logger.EnableConsole(logger.DebugLevel, false)
+}
+
 // 默认Gin表现行为
 // 启用了非200状态码自动包裹响应
 func TestGinDefault(t *testing.T) {
@@ -79,41 +83,45 @@ func TestGinCustomer(t *testing.T) {
 					context.Status(500)
 				})
 			},
-			//DisableBadHttpCodeResolver: true,
-			//DisableDefaultIgnoreHttpCode: true,
+			DisableBadHttpCodeResolver:   false,
+			DisableDefaultIgnoreHttpCode: true,
 			DisableMethodNotAllowedError: false,
-			GlobalPreInterceptors: []ginstarter.PreInterceptor{
-				func(request *ginstarter.Request) (ginstarter.Response, bool) {
-					t, _ := request.GetQueryParam("t")
-					if t == "" {
-						logger.Logrus().Infoln("前置 不继续执行 忽略其他中间件")
-						return ginstarter.RespTextPlain("interceptor", http.StatusOK), false
-					} else {
-						logger.Logrus().Infoln("前置 继续执行 不忽略其他中间件")
-						return nil, true
-					}
-				},
-				func(request *ginstarter.Request) (ginstarter.Response, bool) {
-					logger.Logrus().Infoln("前置 interceptor 2 执行")
-					return nil, true
-				},
-			},
-			GlobalPostInterceptors: []ginstarter.PostInterceptor{
-				func(request *ginstarter.Request, response ginstarter.Response) bool {
-					t, _ := request.GetQueryParam("t")
-					if t == "" {
-						logger.Logrus().Infoln("后置 不继续执行 忽略其他中间件")
-						return false
-					} else {
-						logger.Logrus().Infoln("后置 继续执行 不忽略其他中间件")
-						return false
-					}
-				},
-				func(request *ginstarter.Request, response ginstarter.Response) bool {
-					logger.Logrus().Infoln("后置 interceptor 2 执行")
-					return true
-				},
-			},
+			//GlobalPreInterceptors: []ginstarter.PreInterceptor{
+			//	func(request *ginstarter.Request) (ginstarter.Response, bool, bool) {
+			//		t, _ := request.GetQueryParam("t")
+			//		if t == "" {
+			//			logger.Logrus().Infoln("前置A 不继续执行 忽略其他中间件")
+			//			return ginstarter.RespTextPlain([]byte("interceptor"), http.StatusOK), false, false
+			//		} else {
+			//			logger.Logrus().Infoln("前置A 继续执行 不忽略其他中间件")
+			//			return nil, true, true
+			//		}
+			//	},
+			//	func(request *ginstarter.Request) (ginstarter.Response, bool, bool) {
+			//		logger.Logrus().Infoln("前置B 继续执行 不忽略其他中间件")
+			//		return nil, true, true
+			//	},
+			//},
+			//GlobalPostInterceptors: []ginstarter.PostInterceptor{
+			//	func(request *ginstarter.Request, response ginstarter.Response) (ginstarter.Response, bool) {
+			//		if response != nil {
+			//			logger.Logrus().Infoln("响应拦截器 拦截响应", response.Data().ToDebugString())
+			//		}
+			//		t, _ := request.GetQueryParam("t")
+			//		if t == "" {
+			//			logger.Logrus().Infoln("后置A 继续执行 不忽略其他中间件")
+			//			return nil, true
+			//		} else {
+			//			logger.Logrus().Infoln("后置A 不继续执行 忽略其他中间件")
+			//			return nil, false
+			//		}
+			//	},
+			//	func(request *ginstarter.Request, response ginstarter.Response) (ginstarter.Response, bool) {
+			//		logger.Logrus().Infoln("后置B interceptor 2 执行")
+			//		panic("error")
+			//		return nil, true
+			//	},
+			//},
 		},
 	}
 	loader := parent.NewStarterLoader([]parent.Starter{starter})

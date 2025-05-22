@@ -127,6 +127,7 @@ func (g *GinStarter) Start() (interface{}, error) {
 	}
 	gin.DefaultWriter = &logrusLogger{log: logger.Logrus(), level: logrus.DebugLevel}
 	gin.DefaultErrorWriter = &logrusLogger{log: logger.Logrus(), level: logrus.ErrorLevel}
+
 	ginEngine = gin.New()
 	registerValidators()
 	ginEngine.Use(recoverHandler())
@@ -155,53 +156,73 @@ func (g *GinStarter) Start() (interface{}, error) {
 	if config.ResponseDataStructDecoder == nil {
 		config.ResponseDataStructDecoder = responseJsonDataStructDecoder{}
 	}
-
+	config.GlobalPreInterceptors = coll.SliceFilter(config.GlobalPreInterceptors, func(p PreInterceptor) bool {
+		return p != nil
+	})
+	config.GlobalPostInterceptors = coll.SliceFilter(config.GlobalPostInterceptors, func(p PostInterceptor) bool {
+		return p != nil
+	})
+	// 注册全局前置拦截器批处理中间件
 	if len(config.GlobalPreInterceptors) > 0 {
 		ginEngine.Use(func(ctx *gin.Context) {
 			for i := range config.GlobalPreInterceptors {
 				interceptor := config.GlobalPreInterceptors[i]
-				if interceptor != nil {
-					response, continued := interceptor(&Request{ctx: ctx})
-					if !continued {
-						httpResponse(ctx, response)
-						ctx.Abort()
-						return
-					}
+				response, continuePreInterceptor, continueHandler := interceptor(&Request{ctx: ctx})
+				currentHandler, ok := ctx.Get(ginCtxKeyContinueHandler)
+				if !(ok && !currentHandler.(bool)) {
+					ctx.Set(ginCtxKeyContinueHandler, continueHandler)
+				}
+				if response != nil {
+					httpResponse(ctx, response)
+				}
+				if continuePreInterceptor {
+					continue
+				} else {
+					break
 				}
 			}
-			ctx.Next()
+			ctx.Next() // 一定保证运行下一个中间件
 		})
 	}
-
-	if len(config.GlobalPostInterceptors) > 0 {
-		ginEngine.Use(func(ctx *gin.Context) {
+	// 注册全局后置拦截器批处理中间件
+	ginEngine.Use(func(ctx *gin.Context) {
+		v, exists := ctx.Get(ginCtxKeyContinueHandler)
+		if !exists {
 			ctx.Next()
+		} else {
+			if v.(bool) {
+				ctx.Next()
+			}
+		}
+		if len(config.GlobalPostInterceptors) > 0 {
+			var response Response
+			var newResponse Response
+			var continuePostInterceptor bool
+			currentResponse, exists := ctx.Get(ginCtxKeyCurrentResponse)
+			if exists && currentResponse != nil {
+				response = currentResponse.(Response)
+			}
 			for i := range config.GlobalPostInterceptors {
 				interceptor := config.GlobalPostInterceptors[i]
-				if interceptor != nil {
-					if ctx.IsAborted() {
-						return
-					}
-					response, exists := ctx.Get(ginCtxKeyResponse)
-					var continued bool
-					if !exists {
-						continued = interceptor(&Request{ctx: ctx}, NewCommonResp())
-					} else {
-						continued = interceptor(&Request{ctx: ctx}, response.(Response))
-					}
-					if !continued {
-						ctx.Abort()
-						return
-					}
+				newResponse, continuePostInterceptor = interceptor(&Request{ctx: ctx}, response)
+				if newResponse != nil {
+					response = newResponse
 				}
+				if continuePostInterceptor {
+					continue
+				}
+				break
 			}
-		})
-	}
+			if response != nil {
+				httpResponse(ctx, response)
+			}
+		}
+	})
 
+	config.Routers = coll.SliceFilter(config.Routers, func(r Router) bool {
+		return r != nil
+	})
 	if len(config.Routers) > 0 {
-		config.Routers = coll.SliceFilter(config.Routers, func(v Router) bool {
-			return v != nil
-		})
 		registerRouter(ginEngine, config.Routers)
 	}
 
