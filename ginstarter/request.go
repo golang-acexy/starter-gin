@@ -2,12 +2,14 @@ package ginstarter
 
 import (
 	"errors"
+	"github.com/acexy/golang-toolkit/logger"
 	"github.com/acexy/golang-toolkit/math/conversion"
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
 	"mime/multipart"
 	"net/http"
 	"path/filepath"
+	"strings"
 )
 
 type Request struct {
@@ -236,6 +238,24 @@ func (r *Request) MustBindBodyForm(object any) {
 // GetRawBodyData 将请求body以字节数据返回
 func (r *Request) GetRawBodyData() ([]byte, error) {
 	return r.ctx.GetRawData()
+}
+
+// MustBindBodyAuto 将请求body数据绑定到结构体中 自动识别
+func (r *Request) MustBindBodyAuto(object any) {
+	contentType := r.GetHeader("Content-Type")
+	switch {
+	case strings.HasPrefix(contentType, gin.MIMEJSON):
+		r.MustBindBodyJson(object)
+	case strings.HasPrefix(contentType, gin.MIMEPOSTForm),
+		strings.HasPrefix(contentType, gin.MIMEMultipartPOSTForm):
+		r.MustBindBodyForm(object)
+	default:
+		logger.Logrus().Warningln("unsupported Content-Type: " + contentType)
+		panic(&internalPanic{
+			statusCode: http.StatusBadRequest,
+			rawError:   errors.New("unsupported Content-Type: " + contentType),
+		})
+	}
 }
 
 // MustGetRawBodyData 将请求body以字节数据返回
