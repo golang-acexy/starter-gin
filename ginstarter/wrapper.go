@@ -96,7 +96,7 @@ func (r *RouterWrapper) handler(methods []string, path string, contentType []str
 			}
 			response, err := handler(&Request{context})
 			if err != nil {
-				response.Data().SetStatusCode(http.StatusInternalServerError)
+				context.Status(http.StatusInternalServerError)
 				panic(err)
 			}
 			if response != nil {

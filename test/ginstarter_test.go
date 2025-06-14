@@ -83,7 +83,7 @@ func TestGinCustomer(t *testing.T) {
 					context.Status(500)
 				})
 			},
-			DisableBadHttpCodeResolver:   false,
+			DisableBadHttpCodeResolver:   true,
 			DisableDefaultIgnoreHttpCode: true,
 			DisableMethodNotAllowedError: false,
 			//GlobalPreInterceptors: []ginstarter.PreInterceptor{
