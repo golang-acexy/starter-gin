@@ -376,6 +376,14 @@ func (r *Request) MustSaveUploadedFile(name string, dirPath string, filename ...
 	}
 }
 
+// Panic 抛出异常，中断业务
+func (r *Request) Panic(statusCode int, err error) {
+	panic(&internalPanic{
+		statusCode: statusCode,
+		rawError:   err,
+	})
+}
+
 // GetHeader 获取Head name对应的参数值
 func (r *Request) GetHeader(name string) string {
 	return r.ctx.GetHeader(name)
