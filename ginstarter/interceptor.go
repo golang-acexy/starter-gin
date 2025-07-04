@@ -187,11 +187,9 @@ func recoverHandler() gin.HandlerFunc {
 				} else {
 					errMsg = ginConfig.PanicResolver(err)
 				}
-
 				if status != 0 {
 					ctx.Status(status)
 				}
-
 				writer := ctx.Writer
 				var statusCode int
 				var rewriter *responseRewriter
