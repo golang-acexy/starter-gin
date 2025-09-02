@@ -3,11 +3,12 @@ package ginstarter
 import (
 	"bytes"
 	"fmt"
+	"net/http"
+
 	"github.com/acexy/golang-toolkit/logger"
 	"github.com/acexy/golang-toolkit/sys"
 	"github.com/acexy/golang-toolkit/util/json"
 	"github.com/gin-gonic/gin"
-	"net/http"
 )
 
 // Response 标准响应 用户可以通过自定义实现该接口定义自己的响应结构体
@@ -238,6 +239,10 @@ func (r *ResponseData) AddCookie(cookie *ResponseCookie) *ResponseData {
 
 func (r *ResponseData) ToDebugString() string {
 	return fmt.Sprintf("body: %s head: %v content-type: %s", string(r.data), r.headers, r.contentType)
+}
+
+func (r *ResponseData) RawBody() []byte {
+	return r.data
 }
 
 // restResp 默认的Rest响应结构体
