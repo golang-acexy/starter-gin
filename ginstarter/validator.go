@@ -1,11 +1,12 @@
 package ginstarter
 
 import (
+	"regexp"
+
 	"github.com/acexy/golang-toolkit/util/coll"
 	"github.com/acexy/golang-toolkit/util/str"
 	"github.com/gin-gonic/gin/binding"
 	"github.com/go-playground/validator/v10"
-	"regexp"
 )
 
 /**

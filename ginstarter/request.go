@@ -2,14 +2,15 @@ package ginstarter
 
 import (
 	"errors"
-	"github.com/acexy/golang-toolkit/logger"
-	"github.com/acexy/golang-toolkit/math/conversion"
-	"github.com/gin-gonic/gin"
-	"github.com/gin-gonic/gin/binding"
 	"mime/multipart"
 	"net/http"
 	"path/filepath"
 	"strings"
+
+	"github.com/acexy/golang-toolkit/logger"
+	"github.com/acexy/golang-toolkit/math/conversion"
+	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
 )
 
 type Request struct {
