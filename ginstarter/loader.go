@@ -2,6 +2,9 @@ package ginstarter
 
 import (
 	"context"
+	"net/http"
+	"time"
+
 	"github.com/acexy/golang-toolkit/logger"
 	"github.com/acexy/golang-toolkit/util/coll"
 	"github.com/acexy/golang-toolkit/util/net"
@@ -9,8 +12,6 @@ import (
 	"github.com/golang-acexy/starter-parent/parent"
 	"github.com/libp2p/go-reuseport"
 	"github.com/sirupsen/logrus"
-	"net/http"
-	"time"
 )
 
 var server *http.Server

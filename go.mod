@@ -3,10 +3,10 @@ module github.com/golang-acexy/starter-gin
 go 1.23.5
 
 require (
-	github.com/acexy/golang-toolkit v0.0.51
+	github.com/acexy/golang-toolkit v0.0.52
 	github.com/gin-gonic/gin v1.10.1
 	github.com/go-playground/validator/v10 v10.27.0
-	github.com/golang-acexy/starter-parent v0.1.17
+	github.com/golang-acexy/starter-parent v0.1.18
 	github.com/libp2p/go-reuseport v0.4.0
 	github.com/sirupsen/logrus v1.9.3
 )
