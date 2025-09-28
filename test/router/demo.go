@@ -3,9 +3,10 @@ package router
 import (
 	"errors"
 	"fmt"
-	"github.com/golang-acexy/starter-gin/ginstarter"
 	"net/http"
 	"time"
+
+	"github.com/golang-acexy/starter-gin/ginstarter"
 )
 
 type DemoRouter struct {

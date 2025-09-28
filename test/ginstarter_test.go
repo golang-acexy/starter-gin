@@ -2,6 +2,10 @@ package test
 
 import (
 	"fmt"
+	"net/http"
+	"testing"
+	"time"
+
 	"github.com/acexy/golang-toolkit/logger"
 	"github.com/acexy/golang-toolkit/sys"
 	"github.com/acexy/golang-toolkit/util/json"
@@ -9,9 +13,6 @@ import (
 	"github.com/golang-acexy/starter-gin/ginstarter"
 	"github.com/golang-acexy/starter-gin/test/router"
 	"github.com/golang-acexy/starter-parent/parent"
-	"net/http"
-	"testing"
-	"time"
 )
 
 var starterLoader *parent.StarterLoader
@@ -20,10 +21,16 @@ func init() {
 	logger.EnableConsole(logger.DebugLevel, false)
 }
 
+type traceId struct {
+}
+
+func (t *traceId) GetTraceId() string {
+	return "traceId"
+}
+
 // 默认Gin表现行为
 // 启用了非200状态码自动包裹响应
 func TestGinDefault(t *testing.T) {
-	sys.EnableLocalTraceId(nil)
 	starterLoader = parent.NewStarterLoader([]parent.Starter{
 		&ginstarter.GinStarter{
 			Config: ginstarter.GinConfig{
@@ -37,7 +44,7 @@ func TestGinDefault(t *testing.T) {
 					&router.BasicAuthRouter{},
 					&router.MyRestRouter{},
 				},
-				EnableGoroutineTraceIdResponse: true,
+				TraceIdResponse: &traceId{},
 				InitFunc: func(instance *gin.Engine) {
 					instance.GET("/ping", func(context *gin.Context) {
 						context.String(http.StatusOK, "alive")

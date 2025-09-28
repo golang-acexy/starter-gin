@@ -61,10 +61,8 @@ type GinConfig struct {
 	// 如果自实现Response接口将不使用解码器
 	ResponseDataStructDecoder ResponseDataStructDecoder
 
-	// 尝试启用TraceId响应
-	// https://github.com/acexy/golang-toolkit/blob/main/sys/threadlocal.go
-	// 如果工作环境开启EnableLocalTraceId ，将自动响应TranceId头
-	EnableGoroutineTraceIdResponse bool
+	// 启用TraceId响应
+	TraceIdResponse logger.TraceIdSupplier
 
 	// ========== gin config
 	DebugModule        bool
@@ -121,11 +119,15 @@ func (g *GinStarter) Setting() *parent.Setting {
 func (g *GinStarter) Start() (interface{}, error) {
 	var err error
 	config := g.getConfig()
+	if config.TraceIdResponse != nil {
+		logger.SetTraceIdSupplier(config.TraceIdResponse)
+	}
 	if config.DebugModule {
 		gin.SetMode(gin.DebugMode)
 	} else {
 		gin.SetMode(gin.ReleaseMode)
 	}
+
 	gin.DefaultWriter = &logrusLogger{log: logger.Logrus(), level: logrus.DebugLevel}
 	gin.DefaultErrorWriter = &logrusLogger{log: logger.Logrus(), level: logrus.ErrorLevel}
 
