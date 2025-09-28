@@ -62,7 +62,7 @@ type GinConfig struct {
 	ResponseDataStructDecoder ResponseDataStructDecoder
 
 	// 启用TraceId响应
-	TraceIdResponse logger.TraceIdSupplier
+	TraceIdResponse func() string
 
 	// ========== gin config
 	DebugModule        bool
@@ -119,9 +119,6 @@ func (g *GinStarter) Setting() *parent.Setting {
 func (g *GinStarter) Start() (interface{}, error) {
 	var err error
 	config := g.getConfig()
-	if config.TraceIdResponse != nil {
-		logger.SetTraceIdSupplier(config.TraceIdResponse)
-	}
 	if config.DebugModule {
 		gin.SetMode(gin.DebugMode)
 	} else {

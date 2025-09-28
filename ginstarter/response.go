@@ -41,7 +41,7 @@ func httpResponse(context *gin.Context, response Response) {
 
 	// 是否启用traceId响应
 	if ginConfig.TraceIdResponse != nil {
-		context.Header("Trace-Id", ginConfig.TraceIdResponse.GetTraceId())
+		context.Header("Trace-Id", ginConfig.TraceIdResponse())
 	}
 
 	responseData := response.Data()
