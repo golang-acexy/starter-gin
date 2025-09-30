@@ -6,7 +6,6 @@ import (
 	"net/http"
 
 	"github.com/acexy/golang-toolkit/logger"
-	"github.com/acexy/golang-toolkit/sys"
 	"github.com/acexy/golang-toolkit/util/json"
 	"github.com/gin-gonic/gin"
 )
@@ -41,8 +40,8 @@ func httpResponse(context *gin.Context, response Response) {
 	context.Set(ginCtxKeyCurrentResponse, response)
 
 	// 是否启用traceId响应
-	if ginConfig.EnableGoroutineTraceIdResponse && sys.IsEnabledLocalTraceId() {
-		context.Header("Trace-Id", sys.GetLocalTraceId())
+	if ginConfig.TraceIdResponse != nil {
+		context.Header("Trace-Id", ginConfig.TraceIdResponse())
 	}
 
 	responseData := response.Data()
