@@ -18,7 +18,7 @@ import (
 var starterLoader *parent.StarterLoader
 
 func init() {
-	logger.EnableConsole(logger.DebugLevel, false)
+	logger.EnableConsole(logger.DebugLevel)
 }
 
 type traceId struct {
@@ -44,7 +44,6 @@ func TestGinDefault(t *testing.T) {
 					&router.BasicAuthRouter{},
 					&router.MyRestRouter{},
 				},
-				TraceIdResponse: &traceId{},
 				InitFunc: func(instance *gin.Engine) {
 					instance.GET("/ping", func(context *gin.Context) {
 						context.String(http.StatusOK, "alive")
@@ -53,7 +52,6 @@ func TestGinDefault(t *testing.T) {
 						context.Status(500)
 					})
 				},
-				//DisableDefaultIgnoreHttpCode: true,
 			},
 		},
 	})

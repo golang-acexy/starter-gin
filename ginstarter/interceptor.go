@@ -34,34 +34,28 @@ var (
 	panicResolver PanicResolver = func(err error) string {
 		return err.Error()
 	}
-
 	badHttpCodeResolver BadHttpCodeResolver = func(httpStatusCode int, errMsg string) Response {
-
 		var statusMessage StatusMessage
 		if errMsg != "" {
 			statusMessage = StatusMessage(errMsg)
 		}
-
 		body := RestRespStruct{
 			Status: &RestRespStatusStruct{
 				Timestamp: time.Now().UnixMilli(),
 			},
 		}
-
 		var statusCode StatusCode
 		if v, ok := httpCodeWithStatus[httpStatusCode]; ok {
 			statusCode = v
 		} else {
 			statusCode = StatusCodeException
 		}
-
 		if statusMessage == "" {
 			body.Status.StatusMessage = GetStatusMessage(statusCode)
 		} else {
 			body.Status.StatusMessage = statusMessage
 		}
 		body.Status.StatusCode = statusCode
-
 		return NewRespRest().DataBuilder(func() *ResponseData {
 			bodyBytes, _ := ginConfig.ResponseDataStructDecoder.Decode(body)
 			return NewResponseDataWithStatusCode(gin.MIMEJSON, bodyBytes, http.StatusOK)

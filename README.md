@@ -138,7 +138,7 @@ go get github.com/golang-acexy/starter-gin
         Status *RestRespStatusStruct `json:"status"`
     
         // 仅当StatusCode为200 无业务错误码BizErrorCode 响应成功数据
-        Data any `json:"data"`
+        Message any `json:"data"`
     }
     ```
   通过`RespRest`开始的方法名执行该结构体的Rest风格响应，如果需要在此基础上响应更多信息，则可以使用`NewRespRest()`创建Rest响应实例，设置head、cookie等其他信息
@@ -153,7 +153,7 @@ go get github.com/golang-acexy/starter-gin
     ginstarter.NewRespRest().SetDataResponse(&RestStruct{
 			Code: 200,
 			Msg:  "success",
-			Data: "invoke",
+			Message: "invoke",
 		})
     ```
 
@@ -173,7 +173,7 @@ go get github.com/golang-acexy/starter-gin
 		responseData *ginstarter.ResponseData
 	}
 
-	func (m *MyRestResponse) Data() *ginstarter.ResponseData {
+	func (m *MyRestResponse) Message() *ginstarter.ResponseData {
 		return m.responseData
 	}
 
@@ -182,7 +182,7 @@ go get github.com/golang-acexy/starter-gin
 		m.responseData.SetData(json.ToJsonBytes(&RestStruct{
 			Code: 200,
 			Msg:  "success",
-			Data: data,
+			Message: data,
 		}))
 	}
     ```

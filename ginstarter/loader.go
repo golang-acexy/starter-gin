@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/acexy/golang-toolkit/logger"
 	"github.com/acexy/golang-toolkit/util/coll"
 	"github.com/acexy/golang-toolkit/util/net"
 	"github.com/gin-gonic/gin"
@@ -106,17 +105,17 @@ func (g *GinStarter) Setting() *parent.Setting {
 	config := g.getConfig()
 	return parent.NewSetting(
 		"Gin-Starter",
-		0,
+		1,
 		false,
 		time.Second*30,
-		func(instance interface{}) {
+		func(instance any) {
 			if config.InitFunc != nil {
 				config.InitFunc(instance.(*gin.Engine))
 			}
 		})
 }
 
-func (g *GinStarter) Start() (interface{}, error) {
+func (g *GinStarter) Start() (any, error) {
 	var err error
 	config := g.getConfig()
 	if config.DebugModule {
@@ -125,8 +124,8 @@ func (g *GinStarter) Start() (interface{}, error) {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
-	gin.DefaultWriter = &logrusLogger{log: logger.Logrus(), level: logrus.DebugLevel}
-	gin.DefaultErrorWriter = &logrusLogger{log: logger.Logrus(), level: logrus.ErrorLevel}
+	gin.DefaultWriter = &logrusLogger{level: logrus.DebugLevel}
+	gin.DefaultErrorWriter = &logrusLogger{level: logrus.ErrorLevel}
 
 	ginEngine = gin.New()
 	registerValidators()
