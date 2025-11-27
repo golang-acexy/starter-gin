@@ -10,6 +10,6 @@ type logrusLogger struct {
 }
 
 func (l *logrusLogger) Write(p []byte) (n int, err error) {
-	logger.Logrus().Logln(l.level, string(p))
+	logger.Logrus().Log(l.level, string(p))
 	return len(p), nil
 }

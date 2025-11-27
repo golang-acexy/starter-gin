@@ -19,6 +19,7 @@ var starterLoader *parent.StarterLoader
 
 func init() {
 	logger.EnableConsole(logger.DebugLevel)
+	logger.EnableFileWithJson(logger.WarnLevel)
 }
 
 type traceId struct {

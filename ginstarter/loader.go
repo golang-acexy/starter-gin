@@ -130,7 +130,6 @@ func (g *GinStarter) Start() (any, error) {
 	ginEngine = gin.New()
 	registerValidators()
 	ginEngine.Use(recoverHandler())
-
 	if config.PanicResolver == nil {
 		config.PanicResolver = panicResolver
 	}
