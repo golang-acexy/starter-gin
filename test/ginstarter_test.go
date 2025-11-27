@@ -35,7 +35,7 @@ func init() {
 		if entry.HasCaller() {
 			file = fmt.Sprintf("%s:%d", filepath.Base(entry.Caller.File), entry.Caller.Line)
 		}
-		log := fmt.Sprintf("%s %s %-5s [%s] - %s", traceSupplier.GetTraceId(), timestamp, level, file, entry.Message)
+		log := fmt.Sprintf("%s %s %-5s [%s] - %s\n", traceSupplier.GetTraceId(), timestamp, level, file, entry.Message)
 		return []byte(log), nil
 	}))
 	logger.EnableFileWithJson(logger.TraceLevel)
