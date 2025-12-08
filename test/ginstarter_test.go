@@ -3,6 +3,8 @@ package test
 import (
 	"fmt"
 	"net/http"
+	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -13,15 +15,37 @@ import (
 	"github.com/golang-acexy/starter-gin/ginstarter"
 	"github.com/golang-acexy/starter-gin/test/router"
 	"github.com/golang-acexy/starter-parent/parent"
+	"github.com/sirupsen/logrus"
 )
 
 var starterLoader *parent.StarterLoader
 
 func init() {
-	logger.EnableConsole(logger.DebugLevel)
+	logger.SetTraceIdSupplier(&traceId{})
+	logger.EnableConsoleWithFormatter(logger.TraceLevel, logger.NewFormatter(func(traceSupplier logger.TraceIdSupplier, entry *logrus.Entry) ([]byte, error) {
+		// 格式化时间戳，保留毫秒部分
+		timestamp := entry.Time.Format("2006-01-02 15:04:05.000")
+		// 格式化日志等级，大写右对齐
+		level := strings.ToUpper(entry.Level.String())
+		if len(level) > 5 {
+			level = level[:5]
+		}
+		// 获取文件名与行号
+		file := "unknown:0"
+		if entry.HasCaller() {
+			file = fmt.Sprintf("%s:%d", filepath.Base(entry.Caller.File), entry.Caller.Line)
+		}
+		log := fmt.Sprintf("%s %s %-5s [%s] - %s\n", traceSupplier.GetTraceId(), timestamp, level, file, entry.Message)
+		return []byte(log), nil
+	}))
+	logger.EnableFileWithJson(logger.TraceLevel)
 }
 
 type traceId struct {
+}
+
+func (t *traceId) SetTraceId(s string) {
+
 }
 
 func (t *traceId) GetTraceId() string {

@@ -1,6 +1,8 @@
 package ginstarter
 
 import (
+	"strings"
+
 	"github.com/acexy/golang-toolkit/logger"
 	"github.com/sirupsen/logrus"
 )
@@ -10,6 +12,8 @@ type logrusLogger struct {
 }
 
 func (l *logrusLogger) Write(p []byte) (n int, err error) {
-	logger.Logrus().Logln(l.level, string(p))
+	str := string(p)
+	str = strings.TrimRight(str, "\r\n")
+	logger.Logrus().Log(l.level, str)
 	return len(p), nil
 }
