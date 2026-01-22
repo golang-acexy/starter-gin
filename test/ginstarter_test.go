@@ -184,5 +184,5 @@ func TestGinLoadAndUnload(t *testing.T) {
 		fmt.Printf("%+v\n", err)
 		return
 	}
-	fmt.Println(json.ToJsonFormat(stopResult))
+	fmt.Println(json.ToStringFormat(stopResult))
 }
