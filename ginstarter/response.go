@@ -30,7 +30,7 @@ type responseJsonDataStructDecoder struct {
 }
 
 func (r responseJsonDataStructDecoder) Decode(data any) ([]byte, error) {
-	return json.ToJsonBytesError(data)
+	return json.ToBytesError(data)
 }
 
 func httpResponse(context *gin.Context, response Response) {
