@@ -74,15 +74,13 @@ func httpResponse(context *gin.Context, response Response) {
 	}
 
 	data := responseData.data
-	if len(data) > 0 {
-		writer := context.Writer
-		if w, ok := writer.(*responseRewriter); ok {
-			w.Rest() // 重置响应体
-		}
-		context.Data(httpStatusCode, contentType, data)
-		if context.ContentType() != contentType {
-			context.Header("Content-Type", contentType)
-		}
+	writer := context.Writer
+	if w, ok := writer.(*responseRewriter); ok {
+		w.Rest() // 重置响应体
+	}
+	context.Data(httpStatusCode, contentType, data)
+	if context.ContentType() != contentType {
+		context.Header("Content-Type", contentType)
 	}
 }
 
