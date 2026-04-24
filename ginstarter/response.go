@@ -370,9 +370,9 @@ func RespHttpStatusCode(statusCode int) Response {
 }
 
 // RespJson 响应Json数据
-func RespJson(data []byte, httpStatusCode ...int) Response {
+func RespJson(jsonString string, httpStatusCode ...int) Response {
 	respData := NewEmptyResponseData()
-	respData.SetData(data)
+	respData.SetData([]byte(jsonString))
 	statusCode := http.StatusOK
 	respData.SetContentType(gin.MIMEJSON)
 	if len(httpStatusCode) > 0 {
@@ -382,6 +382,7 @@ func RespJson(data []byte, httpStatusCode ...int) Response {
 	return NewCommonResp().SetDataToResponse(respData)
 }
 
+// RespTextPlain 响应Text数据
 func RespTextPlain(data []byte, httpStatusCode ...int) Response {
 	respData := NewEmptyResponseData()
 	respData.SetData(data)
