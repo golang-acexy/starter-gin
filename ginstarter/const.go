@@ -8,8 +8,8 @@ type BizErrorCode int
 type BizErrorMessage string
 
 const (
-	ginCtxKeyCurrentResponse = "_internal_response"
-	ginCtxKeyContinueHandler = "_internal_continue_handler"
+	ginCtxKeyRequestState = "_internal_request_state"
+	ginCtxKeyRequestBody  = "_internal_request_body"
 )
 const (
 	StatusCodeSuccess            = http.StatusOK

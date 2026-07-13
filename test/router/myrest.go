@@ -38,7 +38,7 @@ func (m *MyRestRouter) m1() ginstarter.HandlerWrapper {
 // 使用框架自带的Rest响应自定义结构体
 func (m *MyRestRouter) m2() ginstarter.HandlerWrapper {
 	return func(request *ginstarter.Request) (ginstarter.Response, error) {
-		return ginstarter.NewRespRest().SetDataResponse(&RestStruct{
+		return ginstarter.NewRespRest().SetBodyResponse(&RestStruct{
 			Code: 200,
 			Msg:  "success",
 			Data: "invoke",
@@ -58,8 +58,8 @@ func (m *MyRestRouter) m3() ginstarter.HandlerWrapper {
 type MyRestResponse struct {
 }
 
-func (m *MyRestResponse) Data() *ginstarter.ResponseData {
-	return ginstarter.NewEmptyResponseData()
+func (m *MyRestResponse) Data() *ginstarter.ResponseEntity {
+	return ginstarter.NewEmptyResponseEntity()
 }
 
 func (m *MyRestResponse) setData(data any) {

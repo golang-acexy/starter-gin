@@ -22,7 +22,7 @@ func (a *AbortRouter) Handlers(router *ginstarter.RouterWrapper) {
 
 func (a *AbortRouter) invoke() ginstarter.HandlerWrapper {
 	return func(request *ginstarter.Request) (ginstarter.Response, error) {
-		return ginstarter.RespHttpStatusCode(203), nil
+		return ginstarter.RespHTTPStatusCode(203), nil
 	}
 }
 

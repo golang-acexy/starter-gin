@@ -1,7 +1,6 @@
 package ginstarter
 
 import (
-	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -20,7 +19,7 @@ import (
 
 var (
 	httpCodeWithStatus          map[int]StatusCode
-	defaultIgnoreHttpStatusCode = []int{
+	defaultIgnoreHTTPStatusCode = []int{
 		http.StatusMultipleChoices,
 		http.StatusMovedPermanently,
 		http.StatusFound,
@@ -34,7 +33,7 @@ var (
 	panicResolver PanicResolver = func(err error) string {
 		return err.Error()
 	}
-	badHttpCodeResolver BadHttpCodeResolver = func(httpStatusCode int, errMsg string) Response {
+	badHTTPCodeResolver BadHTTPCodeResolver = func(httpStatusCode int, errMsg string) Response {
 		var statusMessage StatusMessage
 		if errMsg != "" {
 			statusMessage = StatusMessage(errMsg)
@@ -56,9 +55,12 @@ var (
 			body.Status.StatusMessage = statusMessage
 		}
 		body.Status.StatusCode = statusCode
-		return NewRespRest().DataBuilder(func() *ResponseData {
-			bodyBytes, _ := ginConfig.ResponseDataStructDecoder.Decode(body)
-			return NewResponseDataWithStatusCode(gin.MIMEJSON, bodyBytes, http.StatusOK)
+		return NewRespRest().DataBuilder(func() *ResponseEntity {
+			bodyBytes, err := currentResponseBodyEncoder().Encode(body)
+			if err != nil {
+				return NewResponseEntityWithStatusCode(gin.MIMEPlain, []byte(statusMessageException), http.StatusOK)
+			}
+			return NewResponseEntityWithStatusCode(gin.MIMEJSON, bodyBytes, http.StatusOK)
 		})
 	}
 )
@@ -74,15 +76,16 @@ type internalPanic struct {
 	rawError   error
 }
 
-// PreInterceptor 前置拦截器
-// 任意一个拦截器返回continueHandler=false都将阻止handler执行
-type PreInterceptor func(request *Request) (response Response, continuePreInterceptor bool, continueHandler bool)
+// PreInterceptor 前置拦截器。
+// 返回非空 Response 或 error 时终止后续前置拦截器及 Handler，并进入后置拦截器链。
+type PreInterceptor func(request *Request) (Response, error)
 
-// PostInterceptor 后置拦截器
-type PostInterceptor func(request *Request, response Response) (newResponse Response, continuePostInterceptor bool)
+// PostInterceptor 后置拦截器。
+// 返回非空 Response 时替换当前响应；返回 error 时转换为异常响应并停止当前后置拦截器链。
+type PostInterceptor func(request *Request, response Response) (Response, error)
 
 type PanicResolver func(err error) string
-type BadHttpCodeResolver func(httpStatusCode int, errMsg string) Response
+type BadHTTPCodeResolver func(httpStatusCode int, errMsg string) Response
 
 func init() {
 	httpCodeWithStatus = make(map[int]StatusCode, 7)
@@ -95,16 +98,16 @@ func init() {
 	httpCodeWithStatus[http.StatusUnauthorized] = StatusCodeUnauthorized
 }
 
-func isIgnoreHttpStatusCode(httpCode int) bool {
-	if !ginConfig.DisableDefaultIgnoreHttpCode {
-		for _, v := range defaultIgnoreHttpStatusCode {
+func isIgnoreHTTPStatusCode(httpCode int) bool {
+	if !ginConfig.DisableDefaultIgnoreHTTPCode {
+		for _, v := range defaultIgnoreHTTPStatusCode {
 			if httpCode == v {
 				return true
 			}
 		}
 	}
-	if len(ginConfig.IgnoreHttpCode) > 0 {
-		for _, v := range ginConfig.IgnoreHttpCode {
+	if len(ginConfig.IgnoreHTTPCode) > 0 {
+		for _, v := range ginConfig.IgnoreHTTPCode {
 			if httpCode == v {
 				return true
 			}
@@ -128,9 +131,9 @@ func panicToError(panicError any) (statusCode int, err error, internalError bool
 				internalError = true
 				err = errors.New(friendlyValidatorMessage(validationErrs))
 			} else if jsonErr, ok := rawError.(*json.UnmarshalTypeError); ok {
-				err = errors.New(jsonErr.Field + " type mismatch")
+				err = fmt.Errorf("%w: %s", ErrJSONTypeMismatch, jsonErr.Field)
 			} else if _, ok := rawError.(*json.SyntaxError); ok {
-				err = errors.New("bad json payload")
+				err = ErrBadJSONPayload
 			} else {
 				err = rawError
 			}
@@ -138,18 +141,24 @@ func panicToError(panicError any) (statusCode int, err error, internalError bool
 			err = fmt.Errorf("%v", t)
 		}
 	}
-	if !internalError {
+	// 明确的 4xx 表示请求本身不符合约束，属于可预期的客户端错误，不输出异常调用栈。
+	if statusCode >= http.StatusBadRequest && statusCode < http.StatusInternalServerError {
+		logger.Logrus().Warnf("request rejected: %v", err)
+	} else if !internalError {
 		stack := string(debug.Stack())
 		lines := strings.Split(stack, "\n")
-		index := coll.SliceAnyIndexOf(lines, func(line string) bool {
+		index := coll.SliceIndexBy(lines, func(line string) bool {
 			return strings.Contains(line, "runtime/panic.go")
 		})
-		filter := lines[index:]
-		index = coll.SliceAnyIndexOf(filter, func(line string) bool {
+		filter := lines
+		if index != -1 {
+			filter = lines[index:]
+		}
+		index = coll.SliceIndexBy(filter, func(line string) bool {
 			return strings.Contains(line, "ginstarter/wrapper.go")
 		})
 		if index != -1 {
-			index = coll.SliceAnyIndexOf(filter, func(line string) bool {
+			index = coll.SliceIndexBy(filter, func(line string) bool {
 				return strings.Contains(line, "ginstarter/interceptor.go")
 			})
 			if index != -1 {
@@ -163,103 +172,155 @@ func panicToError(panicError any) (statusCode int, err error, internalError bool
 	return
 }
 
-// recoverHandler 全局Panic处理中间件
-func recoverHandler() gin.HandlerFunc {
-	return func(ctx *gin.Context) {
-		// panic异常处理
-		defer func() {
-			if panicError := recover(); panicError != nil {
-				var errMsg string
-				// 将panic异常进行转换
-				status, err, internalError := panicToError(panicError)
-				if ginConfig.HidePanicErrorDetails { // 禁用异常信息显示
-					if !internalError {
-						errMsg = ""
-						status = 500
-					} else {
-						errMsg = err.Error()
-					}
-				} else {
-					errMsg = ginConfig.PanicResolver(err)
-				}
-				if status != 0 {
-					ctx.Status(status)
-				}
-				writer := ctx.Writer
-				var statusCode int
-				var rewriter *responseRewriter
-				// 如果使用了可覆写中间件
-				if w, ok := writer.(*responseRewriter); ok {
-					rewriter = w
-					statusCode = w.statusCode
-				} else {
-					statusCode = ctx.Writer.Status()
-				}
-				var response Response
-				if !ginConfig.DisableBadHttpCodeResolver {
-					response = ginConfig.BadHttpCodeResolver(statusCode, errMsg)
-					ctx.Writer.Header().Set("Content-Type", gin.MIMEJSON)
-				} else {
-					response = RespTextPlain([]byte(errMsg), statusCode)
-				}
-				httpResponse(ctx, response)
-				if rewriter != nil {
-					rewriter.ResponseWriter.WriteHeader(rewriter.statusCode)
-					_, _ = rewriter.ResponseWriter.Write(rewriter.body.Bytes())
-				}
-			}
-		}()
+// responseTracker 记录业务代码是否直接操作了 Gin 原生响应。
+// 仅设置 Header 不视为提交响应，框架最终响应仍会保留这些 Header。
+type responseTracker struct {
+	gin.ResponseWriter
+	nativeWritten bool
+}
 
-		ctx.Next()
-		// 异常响应码处理
-		if !ginConfig.DisableBadHttpCodeResolver {
-			var statusCode int
-			var rewriter *responseRewriter
-			if v, ok := ctx.Writer.(*responseRewriter); ok {
-				rewriter = v
-				if v.statusCode != 0 && v.statusCode != http.StatusOK {
-					statusCode = v.statusCode
-				} else {
-					statusCode = v.ResponseWriter.Status()
+func (r *responseTracker) WriteHeader(code int) {
+	r.nativeWritten = true
+	r.ResponseWriter.WriteHeader(code)
+}
+
+func (r *responseTracker) Write(data []byte) (int, error) {
+	r.nativeWritten = true
+	return r.ResponseWriter.Write(data)
+}
+
+func (r *responseTracker) WriteString(data string) (int, error) {
+	r.nativeWritten = true
+	return r.ResponseWriter.WriteString(data)
+}
+
+func nativeResponseWritten(context *gin.Context) bool {
+	if tracker, ok := context.Writer.(*responseTracker); ok && tracker.nativeWritten {
+		return true
+	}
+	return context.Writer.Written()
+}
+
+// resolvePanic 将 panic 转换为框架 Response，不直接写入客户端。
+func resolvePanic(panicValue any) Response {
+	status, err, safeToExpose := panicToError(panicValue)
+	if status == 0 {
+		status = http.StatusInternalServerError
+	}
+	errMsg := ""
+	if !ginConfig.HidePanicErrorDetails || safeToExpose {
+		errMsg = ginConfig.PanicResolver(err)
+	}
+	if !ginConfig.DisableBadHTTPCodeResolver && !isIgnoreHTTPStatusCode(status) {
+		return ginConfig.BadHTTPCodeResolver(status, errMsg)
+	}
+	return RespTextPlain([]byte(errMsg), status)
+}
+
+func recoverResponse(context *gin.Context) {
+	if panicValue := recover(); panicValue != nil {
+		setResponse(context, resolvePanic(panicValue))
+		getRequestState(context).stopped = true
+		context.Abort()
+	}
+}
+
+func nextWithRecovery(context *gin.Context) {
+	defer recoverResponse(context)
+	context.Next()
+}
+
+func runPreInterceptors(context *gin.Context, interceptors []PreInterceptor) {
+	state := getRequestState(context)
+	for _, interceptor := range interceptors {
+		var response Response
+		var interceptorErr error
+		func() {
+			defer func() {
+				if panicValue := recover(); panicValue != nil {
+					response = resolvePanic(panicValue)
 				}
-			} else {
-				statusCode = ctx.Writer.Status()
-			}
-			if statusCode != http.StatusOK {
-				if isIgnoreHttpStatusCode(statusCode) {
-					return
-				}
-				logger.Logrus().Warningln("Bad response path:", ctx.Request.URL, "status code:", statusCode)
-				response := ginConfig.BadHttpCodeResolver(statusCode, "")
-				httpResponse(ctx, response)
-				if rewriter != nil {
-					rewriter.ResponseWriter.WriteHeader(rewriter.statusCode)
-					_, _ = rewriter.ResponseWriter.Write(rewriter.body.Bytes())
-				}
-			}
+			}()
+			response, interceptorErr = interceptor(&Request{ctx: context})
+		}()
+		if interceptorErr != nil {
+			response = resolvePanic(interceptorErr)
+		}
+		if response != nil {
+			state.response = response
+			state.stopped = true
+			context.Abort()
+			return
 		}
 	}
 }
 
-// responseRewriteHandler 可重写Http状态码中间件
-func responseRewriteHandler() gin.HandlerFunc {
+func runPostInterceptors(context *gin.Context, interceptors []PostInterceptor) {
+	state := getRequestState(context)
+	for _, interceptor := range interceptors {
+		var response Response
+		var interceptorErr error
+		failed := false
+		func() {
+			defer func() {
+				if panicValue := recover(); panicValue != nil {
+					response = resolvePanic(panicValue)
+					failed = true
+				}
+			}()
+			response, interceptorErr = interceptor(&Request{ctx: context}, state.response)
+		}()
+		if interceptorErr != nil {
+			response = resolvePanic(interceptorErr)
+			failed = true
+		}
+		if response != nil {
+			state.response = response
+		}
+		if failed {
+			return
+		}
+	}
+}
+
+func normalizeResponse(context *gin.Context) Response {
+	response := currentResponse(context)
+	if response == nil || response.Data() == nil || ginConfig.DisableBadHTTPCodeResolver {
+		return response
+	}
+	statusCode := response.Data().statusCode
+	if statusCode == 0 {
+		statusCode = http.StatusOK
+	}
+	if statusCode == http.StatusOK || isIgnoreHTTPStatusCode(statusCode) {
+		return response
+	}
+	logger.Logrus().Warningln("Bad response path:", context.Request.URL, "status code:", statusCode)
+	response = ginConfig.BadHTTPCodeResolver(statusCode, "")
+	setResponse(context, response)
+	return response
+}
+
+// responsePipelineHandler 负责捕获遗漏异常、规范化状态并且只提交一次框架响应。
+func responsePipelineHandler() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		writer := &responseRewriter{
-			ResponseWriter: ctx.Writer,
-			body:           bytes.NewBufferString(""),
+		tracker := &responseTracker{ResponseWriter: ctx.Writer}
+		ctx.Writer = tracker
+		if ginConfig.MaxRequestBodyBytes > 0 && ctx.Request.Body != nil {
+			ctx.Request.Body = http.MaxBytesReader(ctx.Writer, ctx.Request.Body, ginConfig.MaxRequestBodyBytes)
 		}
-		ctx.Writer = writer
-		ctx.Next()
-		if writer.statusCode == 0 { // 未设置自定义状态码
-			writer.statusCode = writer.ResponseWriter.Status()
-		}
-		writer.ResponseWriter.WriteHeader(writer.statusCode)
-		if writer.body.Len() > 0 {
-			_, err := writer.ResponseWriter.Write(writer.body.Bytes())
-			if err != nil {
-				panic(err)
+		getRequestState(ctx)
+		defer func() {
+			if panicValue := recover(); panicValue != nil {
+				setResponse(ctx, resolvePanic(panicValue))
 			}
-		}
+			// 原生 Gin 响应一旦写入，框架不再尝试覆盖。
+			if nativeResponseWritten(ctx) || tracker.ResponseWriter.Written() {
+				return
+			}
+			writeResponse(ctx, normalizeResponse(ctx))
+		}()
+		ctx.Next()
 	}
 }
 
@@ -268,44 +329,52 @@ func responseRewriteHandler() gin.HandlerFunc {
 // BasicAuthInterceptor 基础权限校验中间件
 // match 满足指定条件才执行
 func BasicAuthInterceptor(account *BasicAuthAccount, match ...func(request *Request) bool) PreInterceptor {
-	return func(request *Request) (Response, bool, bool) {
+	return func(request *Request) (Response, error) {
 		if len(match) > 0 {
 			if !match[0](request) {
-				return nil, true, true
+				return nil, nil
 			}
 		}
 		if request.GetHeader("Authorization") == "" {
-			return RespHttpStatusCode(http.StatusUnauthorized), false, false
+			return RespHTTPStatusCode(http.StatusUnauthorized), nil
 		}
 		enc := "Basic " + base64.StdEncoding.EncodeToString(conversion.ParseBytes(account.Username+":"+account.Password))
 		if request.GetHeader("Authorization") != enc {
-			return RespHttpStatusCode(http.StatusUnauthorized), false, false
+			return RespHTTPStatusCode(http.StatusUnauthorized), nil
 		}
-		return nil, true, true
+		return nil, nil
 	}
 }
 
 // MediaTypeInterceptor ContentType校验中间件
 func MediaTypeInterceptor(contentType []string, match ...func(request *Request) bool) PreInterceptor {
-	return func(request *Request) (Response, bool, bool) {
+	return func(request *Request) (Response, error) {
 		if len(match) > 0 {
 			if !match[0](request) {
-				return nil, true, true
+				return nil, nil
 			}
 		}
 		if len(contentType) > 0 {
 			if !isMatchMediaType(contentType, request.GetHeader("Content-Type")) {
-				return RespHttpStatusCode(http.StatusUnsupportedMediaType), false, false
+				return RespHTTPStatusCode(http.StatusUnsupportedMediaType), nil
 			}
 		} else {
 			logger.Logrus().Warningln("valid Content-Type restriction not set")
 		}
-		return nil, true, true
+		return nil, nil
 	}
 }
 
 func isMatchMediaType(allowContentType []string, requestContentType string) bool {
-	return coll.SliceContains(allowContentType, strings.TrimSpace(strings.Split(requestContentType, ";")[0]), func(s1 string, s2 string) bool {
-		return strings.ToLower(s1) == strings.ToLower(s2)
-	})
+	requestMediaType, err := parseMediaType(requestContentType)
+	if err != nil {
+		return false
+	}
+	for _, allowedContentType := range allowContentType {
+		allowedMediaType, parseErr := parseMediaType(allowedContentType)
+		if parseErr == nil && allowedMediaType == requestMediaType {
+			return true
+		}
+	}
+	return false
 }
