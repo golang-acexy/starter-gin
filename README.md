@@ -206,7 +206,7 @@ entity := ginstarter.NewResponseEntityWithStatusCode(
     AddCookie(ginstarter.NewCookie("session", "value", 3600, "/", "", true, true))
 
 return ginstarter.NewCommonResp().SetEntityResponse(entity), nil
-~~~
+~~~g s
 
 **Body** returns a copy. **UnsafeRawBody** exposes the internal byte slice only for post-interceptors that intentionally need in-place mutation. **DebugString** provides bounded diagnostic output.
 

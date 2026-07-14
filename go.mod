@@ -6,7 +6,7 @@ require (
 	github.com/acexy/golang-toolkit v0.0.65-0.20260708022919-0acbe3b6386d
 	github.com/gin-gonic/gin v1.12.0
 	github.com/go-playground/validator/v10 v10.30.3
-	github.com/golang-acexy/starter-parent v0.1.23-0.20260708032210-6a1c7daa5a03
+	github.com/golang-acexy/starter-parent v0.1.23-0.20260713093351-c249c35849a4
 	github.com/libp2p/go-reuseport v0.4.0
 	github.com/sirupsen/logrus v1.9.4
 )
