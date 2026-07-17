@@ -2,9 +2,15 @@
 
 **starter-gin** is the HTTP server starter for the golang-acexy starter/cloud ecosystem. It wraps Gin with parent-managed lifecycle, structured routing, request binding, interceptor chains, panic recovery, and a single framework response pipeline.
 
+## Ecosystem Role
+
+This module is the HTTP transport foundation. Applications may use it directly with custom routers, while `cloud-web` builds standardized CRUD and authority-aware routers on top of its request and response contracts.
+
 ## Requirements
 
 Current module Go version: **1.25.8**.
+
+## Installation
 
 ~~~bash
 go get github.com/golang-acexy/starter-gin
@@ -306,3 +312,4 @@ Use **Request.Panic(statusCode, err)** to stop processing with an explicit HTTP 
 - The starter owns one server and one Gin engine per process.
 - **MaxMultipartMemory** is not an upload-size limit; use **MaxRequestBodyBytes** for a complete request limit.
 - **RawGinEngine** is only meaningful while the starter is running.
+- The standard Gin starter does not allow parent-managed restart after successful shutdown.

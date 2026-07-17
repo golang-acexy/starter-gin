@@ -114,6 +114,7 @@ func (g *GinStarter) Setting() *parent.Setting {
 	config := g.getConfig()
 	return parent.NewSetting(
 		"Gin-Starter",
+		false,
 		1,
 		false,
 		time.Second*30,

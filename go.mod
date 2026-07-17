@@ -3,10 +3,10 @@ module github.com/golang-acexy/starter-gin
 go 1.25.8
 
 require (
-	github.com/acexy/golang-toolkit v0.0.65-0.20260708022919-0acbe3b6386d
+	github.com/acexy/golang-toolkit v1.25.0
 	github.com/gin-gonic/gin v1.12.0
 	github.com/go-playground/validator/v10 v10.30.3
-	github.com/golang-acexy/starter-parent v0.1.23-0.20260713093351-c249c35849a4
+	github.com/golang-acexy/starter-parent v1.25.0
 	github.com/libp2p/go-reuseport v0.4.0
 	github.com/sirupsen/logrus v1.9.4
 )
@@ -26,7 +26,7 @@ require (
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/cpuid/v2 v2.4.0 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
-	github.com/mattn/go-isatty v0.0.22 // indirect
+	github.com/mattn/go-isatty v0.0.23 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/pelletier/go-toml/v2 v2.4.3 // indirect
