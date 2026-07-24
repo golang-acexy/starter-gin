@@ -1,117 +1,211 @@
 package router
 
 import (
-	"fmt"
+	"mime/multipart"
 
 	"github.com/acexy/golang-toolkit/logger"
 	"github.com/golang-acexy/starter-gin/ginstarter"
 )
 
-type ParamRouter struct {
-}
+const paramTestPathPrefix = "/param-test/"
+
+// ParamRouter 验证 path、query、header、cookie、JSON、Form、multipart 和原始正文解析。
+// 每个 Handler 都会输出带有 [param-test] 前缀的场景日志，便于同时核对响应与服务端解析结果。
+//
+// 启动方式（分别启动，不要同时占用 8080 端口）：
+//
+// go test ./test -run '^TestGinDefault$' -count=1 -v
+// go test ./test -run '^TestGinCustomer$' -count=1 -v
+//
+// 正常场景：
+//
+// curl -i 'http://127.0.0.1:8080/param-test/path/12/acexy'
+// curl --globoff -i 'http://127.0.0.1:8080/param-test/query?id=12&name=acexy&tag=go&tag=gin&filter[role]=admin'
+// curl -i 'http://127.0.0.1:8080/param-test/metadata' -H 'X-Request-ID: request-1' --cookie 'session=session-1'
+// curl -i 'http://127.0.0.1:8080/param-test/body/json' -H 'Content-Type: application/json; charset=utf-8' --data '{"id":12,"name":"acexy"}'
+// curl -i 'http://127.0.0.1:8080/param-test/body/auto' -H 'Content-Type: application/json' --data '{"id":12,"name":"acexy"}'
+// curl -i 'http://127.0.0.1:8080/param-test/body/auto' -H 'Content-Type: application/x-www-form-urlencoded' --data 'id=12&name=acexy'
+// curl -i 'http://127.0.0.1:8080/param-test/body/form' -H 'Content-Type: application/x-www-form-urlencoded' --data 'id=12&name=acexy'
+// curl -i 'http://127.0.0.1:8080/param-test/body/form-values' -H 'Content-Type: application/x-www-form-urlencoded' --data 'name=acexy&tag=go&tag=gin&filter[role]=admin'
+// curl -i 'http://127.0.0.1:8080/param-test/body/multipart' -F 'id=12' -F 'name=acexy' -F 'file=@ginstarter/error.go;type=text/plain'
+// curl -i 'http://127.0.0.1:8080/param-test/body/raw-repeat' -H 'Content-Type: application/json' --data '{"id":12,"name":"acexy"}'
+//
+// 异常场景：
+//
+// curl -i 'http://127.0.0.1:8080/param-test/path/not-number/acexy'
+// curl -i 'http://127.0.0.1:8080/param-test/query?name=acexy'
+// curl -i 'http://127.0.0.1:8080/param-test/metadata' -H 'X-Request-ID: request-1'
+// curl -i 'http://127.0.0.1:8080/param-test/body/json' -H 'Content-Type: application/json' --data '{bad-json}'
+// curl -i 'http://127.0.0.1:8080/param-test/body/json' -H 'Content-Type: application/json' --data '{"id":"wrong","name":"acexy"}'
+// curl -i 'http://127.0.0.1:8080/param-test/body/auto' -H 'Content-Type: text/plain' --data 'unsupported'
+// curl -i 'http://127.0.0.1:8080/param-test/body/form-values' -H 'Content-Type: application/x-www-form-urlencoded' --data 'name=%ZZ&tag=go&filter[role]=admin'
+// curl -i 'http://127.0.0.1:8080/param-test/body/multipart' -H 'Content-Type: multipart/form-data' --data 'missing-boundary'
+// curl -i 'http://127.0.0.1:8080/param-test/body/json' -H 'Content-Type: application/json' --data-binary @README.md
+// curl -i 'http://127.0.0.1:8080/param-test/body/form-values' -H 'Content-Type: application/x-www-form-urlencoded' --data-binary @README.md
+type ParamRouter struct{}
 
 func (d *ParamRouter) Info() *ginstarter.RouterInfo {
 	return &ginstarter.RouterInfo{
-		GroupPath: "param",
-		PreInterceptors: []ginstarter.PreInterceptor{func(request *ginstarter.Request) (response ginstarter.Response, continuePreInterceptor bool, continueHandler bool) {
-			logger.Logrus().Infoln("group interceptor invoke")
-			return ginstarter.RespTextPlain([]byte("hello world"), 200), true, false
-		}},
-		PostInterceptors: []ginstarter.PostInterceptor{
-			func(request *ginstarter.Request, response ginstarter.Response) (newResponse ginstarter.Response, continuePostInterceptor bool) {
-				if response != nil {
-					fmt.Println(response.Data().ToDebugString())
-				}
-				return ginstarter.NewRespRest().SetDataResponse("ok"), true
-			},
-		},
+		GroupPath: "param-test",
 	}
 }
 
 func (d *ParamRouter) Handlers(router *ginstarter.RouterWrapper) {
-	router.POST1("json", []string{"application-json"}, d.json())
-	// demo path /param/uri-path/101/acexy
-	router.GET("uri-path/:id/:name", d.path())
-	// demo path /param/uri-path/query?id=1&name=acexy
-	router.GET("uri-path/query", d.query())
-	// demo path /param/body/json    body > {"id":1,"name":"acexy"}
+	router.GET("path/:id/:name", d.path())
+	router.GET("query", d.query())
+	router.GET("metadata", d.metadata())
 	router.POST("body/json", d.json())
-	// demo path /param/body/form    body > id=1&name=acexy
+	router.POST("body/auto", d.auto())
 	router.POST("body/form", d.form())
-	router.GET("bind-query", d.bindQuery())
+	router.POST("body/form-values", d.formValues())
+	router.POST("body/multipart", d.multipart())
+	router.POST("body/raw-repeat", d.rawRepeat())
 }
 
-type UriPathUser struct {
-	Id   uint   `uri:"id" validate:"number"`
+type paramPathInput struct {
+	ID   uint   `uri:"id" binding:"required"`
 	Name string `uri:"name"`
 }
 
-type UriQueryUser struct {
-	Id   uint   `form:"id" binding:"required"`
-	Name string `form:"name"`
+type paramQueryInput struct {
+	ID   uint   `form:"id" binding:"required"`
+	Name string `form:"name" binding:"required"`
 }
 
-type BodyJsonUser struct {
-	Id   uint   `json:"id" binding:"required,numeric"`
-	Name string `json:"name" binding:"required"`
-	Age  uint   `json:"age"`
-	Fat  bool   `json:"fat"`
+type paramBodyInput struct {
+	ID   uint   `json:"id" form:"id" binding:"required"`
+	Name string `json:"name" form:"name" binding:"required"`
 }
 
-type BodyFormUser struct {
-	Id     uint   `form:"id" binding:"required,min=10"`
-	Name   string `form:"name" binding:"required"`
-	Email  string `form:"email" binding:"required,email"`
-	Domain string `form:"domain" binding:"domain"`
+type paramMultipartInput struct {
+	ID   uint                  `form:"id" binding:"required"`
+	Name string                `form:"name" binding:"required"`
+	File *multipart.FileHeader `form:"file" binding:"required"`
 }
 
 func (d *ParamRouter) path() ginstarter.HandlerWrapper {
 	return func(request *ginstarter.Request) (ginstarter.Response, error) {
-		fmt.Println("Request Ip", request.RequestIP())
-		// 获取url路径参数
-		uriParams := request.GetPathParams("id", "name", "unknown")
-		fmt.Printf("uriPath %+v\n", uriParams)
-		// demo path /param/uri-path/a/acexy 触发参数错误
-		user := new(UriPathUser)
-		request.MustBindPathParams(user)
-		fmt.Printf("%+v\n", user)
-		return ginstarter.RespRestSuccess(), nil
+		input := paramPathInput{}
+		request.MustBindPathParams(&input)
+		result := map[string]any{
+			"bound": input,
+			"raw":   request.GetPathParams("id", "name", "unknown"),
+		}
+		logParamResult(request, "path", result)
+		return ginstarter.RespRestSuccess(result), nil
 	}
 }
 
 func (d *ParamRouter) query() ginstarter.HandlerWrapper {
 	return func(request *ginstarter.Request) (ginstarter.Response, error) {
-		user := new(UriQueryUser)
-		// demo path /param/uri-path/query?name=acexy 触发参数错误
-		request.BindQueryParams(user)
-		fmt.Printf("%+v\n", user)
-		return ginstarter.RespRestSuccess(), nil
+		input := paramQueryInput{}
+		request.MustBindQueryParams(&input)
+		tags, _ := request.GetQueryParamArray("tag")
+		filters, _ := request.GetQueryParamMap("filter")
+		result := map[string]any{
+			"bound":   input,
+			"tags":    tags,
+			"filters": filters,
+		}
+		logParamResult(request, "query", result)
+		return ginstarter.RespRestSuccess(result), nil
+	}
+}
+
+func (d *ParamRouter) metadata() ginstarter.HandlerWrapper {
+	return func(request *ginstarter.Request) (ginstarter.Response, error) {
+		result := map[string]any{
+			"requestId": request.GetHeader("X-Request-ID"),
+			"session":   request.MustGetCookie("session"),
+			"method":    request.Method(),
+			"path":      request.RequestPath(),
+			"clientIp":  request.ClientIP(),
+		}
+		logParamResult(request, "metadata", result)
+		return ginstarter.RespRestSuccess(result), nil
 	}
 }
 
 func (d *ParamRouter) json() ginstarter.HandlerWrapper {
 	return func(request *ginstarter.Request) (ginstarter.Response, error) {
-		user := BodyJsonUser{}
-		request.MustBindBodyJson(&user)
-		fmt.Printf("%+v\n", user)
-		return ginstarter.RespRestSuccess(user), nil
+		input := paramBodyInput{}
+		request.MustBindBodyJSON(&input)
+		logParamResult(request, "json", input)
+		return ginstarter.RespRestSuccess(input), nil
+	}
+}
+
+func (d *ParamRouter) auto() ginstarter.HandlerWrapper {
+	return func(request *ginstarter.Request) (ginstarter.Response, error) {
+		input := paramBodyInput{}
+		request.MustBindBodyAuto(&input)
+		logParamResult(request, "auto", input)
+		return ginstarter.RespRestSuccess(input), nil
 	}
 }
 
 func (d *ParamRouter) form() ginstarter.HandlerWrapper {
 	return func(request *ginstarter.Request) (ginstarter.Response, error) {
-		user := BodyFormUser{}
-		request.MustBindBodyForm(&user)
-		fmt.Printf("%+v\n", user)
-		return ginstarter.RespRestSuccess(), nil
+		input := paramBodyInput{}
+		request.MustBindBodyForm(&input)
+		logParamResult(request, "form", input)
+		return ginstarter.RespRestSuccess(input), nil
 	}
 }
 
-func (d *ParamRouter) bindQuery() ginstarter.HandlerWrapper {
+func (d *ParamRouter) formValues() ginstarter.HandlerWrapper {
 	return func(request *ginstarter.Request) (ginstarter.Response, error) {
-		user := BodyFormUser{}
-		request.MustBindQueryParams(&user)
-		fmt.Printf("%+v\n", user)
-		return ginstarter.RespRestSuccess(), nil
+		name := request.MustGetFormValue("name")
+		tags := request.MustGetFormArray("tag")
+		filters := request.MustGetFormMap("filter")
+		result := map[string]any{
+			"name":    name,
+			"tags":    tags,
+			"filters": filters,
+		}
+		logParamResult(request, "form-values", result)
+		return ginstarter.RespRestSuccess(result), nil
 	}
+}
+
+func (d *ParamRouter) multipart() ginstarter.HandlerWrapper {
+	return func(request *ginstarter.Request) (ginstarter.Response, error) {
+		input := paramMultipartInput{}
+		request.MustBindBodyAuto(&input)
+		result := map[string]any{
+			"id":       input.ID,
+			"name":     input.Name,
+			"filename": input.File.Filename,
+			"size":     input.File.Size,
+		}
+		logParamResult(request, "multipart", result)
+		return ginstarter.RespRestSuccess(result), nil
+	}
+}
+
+func (d *ParamRouter) rawRepeat() ginstarter.HandlerWrapper {
+	return func(request *ginstarter.Request) (ginstarter.Response, error) {
+		first := request.MustGetRawBodyData()
+		second := request.MustGetRawBodyData()
+		input := paramBodyInput{}
+		request.MustBindBodyJSON(&input)
+		result := map[string]any{
+			"same":       string(first) == string(second),
+			"firstSize":  len(first),
+			"secondSize": len(second),
+			"bound":      input,
+		}
+		logParamResult(request, "raw-repeat", result)
+		return ginstarter.RespRestSuccess(result), nil
+	}
+}
+
+func logParamResult(request *ginstarter.Request, testCase string, value any) {
+	logger.Logrus().Infof(
+		"[param-test] case=%s method=%s path=%s result=%+v",
+		testCase,
+		request.Method(),
+		request.RequestPath(),
+		value,
+	)
 }

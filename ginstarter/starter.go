@@ -2,11 +2,11 @@ package ginstarter
 
 import (
 	"context"
+	"net"
 	"net/http"
 	"time"
 
 	"github.com/acexy/golang-toolkit/util/coll"
-	"github.com/acexy/golang-toolkit/util/net"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-acexy/starter-parent/parent"
 	"github.com/libp2p/go-reuseport"
@@ -33,7 +33,7 @@ type GinConfig struct {
 	UseReusePortModel bool
 
 	// 默认情况系统会将捕获的异常详细发给PanicResolver处理，如果不想将细节暴露向外
-	// 方案 1. 启用隐藏异常细节功能，系统将在触发panic重要错误时不再调用PanicResolver处理，并统一响应500错误
+	// 方案 1. 启用隐藏异常细节功能，系统不会向客户端暴露未知异常信息，但会保留明确指定的HTTP状态码
 	// 方案 2. 如果不想禁用异常时调用PanicResolver, 可以在初始化时手动设置自定义PanicResolver处理器
 	// * panic 将被分为框架内部错误和框架未知错误 框架内部错误是非敏感错误，不受该参数控制，每次都会触发PanicResolver，例如验证框架错误
 	HidePanicErrorDetails bool
@@ -41,31 +41,41 @@ type GinConfig struct {
 	PanicResolver PanicResolver
 
 	// 禁用异常http响应码Resolver
-	DisableBadHttpCodeResolver bool
+	DisableBadHTTPCodeResolver bool
 	// 禁用系统内置的忽略异常响应码
-	DisableDefaultIgnoreHttpCode bool
+	DisableDefaultIgnoreHTTPCode bool
 	// 启用异常http响应码Resolver 指定不处理特定的异常响应码
-	IgnoreHttpCode []int
+	IgnoreHTTPCode []int
 	// 启用异常http响应码Resolver 如果不指定则使用默认方式
-	BadHttpCodeResolver BadHttpCodeResolver
+	BadHTTPCodeResolver BadHTTPCodeResolver
 
-	// 自定义全局拦截器 按照顺序执行 作用于 业务路由执行前
+	// GlobalPreInterceptors 全局前置拦截器。
+	// 在路由前置拦截器和业务 Handler 之前，按照切片注册顺序执行。
+	// 任一拦截器返回非空 Response 或 error 时，将终止后续前置拦截器和 Handler；
+	// 此时不会进入路由拦截器链，但仍会执行全局后置拦截器，并由框架统一写入最终 Response。
 	GlobalPreInterceptors []PreInterceptor
 
-	// 自定义全局拦截器 按照顺序执行 作用于 业务路由执行后
+	// GlobalPostInterceptors 全局后置拦截器。
+	// 在路由后置拦截器执行完成后，按照切片注册顺序执行。
+	// 每个拦截器接收当前 Response：返回非空 Response 时替换当前响应，返回 nil 时保留当前响应；
+	// 返回 error 时将其转换为异常 Response，并终止剩余的全局后置拦截器。
+	// 全部执行完成后，由框架统一写入最终 Response。
 	GlobalPostInterceptors []PostInterceptor
 
-	// 响应数据的结构体解码器 默认为JSON方式解码
-	// 在使用NewRespRest响应结构体数据时解码为[]byte数据的解码器
-	// 如果自实现Response接口将不使用解码器
-	ResponseDataStructDecoder ResponseDataStructDecoder
+	// ResponseBodyEncoder 响应正文编码器，默认使用 JSON 编码。
+	// NewRespRest 使用该编码器将结构化正文编码为字节数据。
+	// 如果自实现 Response 接口并直接提供字节正文，则不会使用该编码器。
+	ResponseBodyEncoder ResponseBodyEncoder
 
 	// 启用TraceId响应
-	TraceIdResponse func() string
+	TraceIDResponse func() string
 
 	// ========== gin config
-	DebugModule        bool
+	DebugModule bool
+	// MaxMultipartMemory multipart 表单解析时允许保存在内存中的最大字节数，超出部分写入临时文件。
 	MaxMultipartMemory int64
+	// MaxRequestBodyBytes 请求正文最大字节数，零值表示不限制。
+	MaxRequestBodyBytes int64
 
 	// 关闭包裹405错误展示，使用404代替
 	DisableMethodNotAllowedError bool
@@ -93,7 +103,6 @@ func (g *GinStarter) getConfig() *GinConfig {
 		} else {
 			g.config = &g.Config
 		}
-		ginConfig = g.config
 	}
 	return g.config
 }
@@ -105,6 +114,7 @@ func (g *GinStarter) Setting() *parent.Setting {
 	config := g.getConfig()
 	return parent.NewSetting(
 		"Gin-Starter",
+		false,
 		1,
 		false,
 		time.Second*30,
@@ -117,7 +127,12 @@ func (g *GinStarter) Setting() *parent.Setting {
 
 func (g *GinStarter) Start() (any, error) {
 	var err error
+	if server != nil {
+		return ginEngine, ErrGinStarterAlreadyStarted
+	}
 	config := g.getConfig()
+	// 停止时会清空全局配置，因此每次启动都需要重新绑定当前配置。
+	ginConfig = config
 	if config.DebugModule {
 		gin.SetMode(gin.DebugMode)
 	} else {
@@ -129,7 +144,6 @@ func (g *GinStarter) Start() (any, error) {
 
 	ginEngine = gin.New()
 	registerValidators()
-	ginEngine.Use(recoverHandler())
 	if config.PanicResolver == nil {
 		config.PanicResolver = panicResolver
 	}
@@ -144,15 +158,12 @@ func (g *GinStarter) Start() (any, error) {
 		ginEngine.HandleMethodNotAllowed = true
 	}
 
-	if !config.DisableBadHttpCodeResolver {
-		ginEngine.Use(responseRewriteHandler())
-		if config.BadHttpCodeResolver == nil {
-			config.BadHttpCodeResolver = badHttpCodeResolver
-		}
+	if config.BadHTTPCodeResolver == nil {
+		config.BadHTTPCodeResolver = badHTTPCodeResolver
 	}
 
-	if config.ResponseDataStructDecoder == nil {
-		config.ResponseDataStructDecoder = responseJsonDataStructDecoder{}
+	if config.ResponseBodyEncoder == nil {
+		config.ResponseBodyEncoder = jsonResponseBodyEncoder{}
 	}
 	config.GlobalPreInterceptors = coll.SliceFilter(config.GlobalPreInterceptors, func(p PreInterceptor) bool {
 		return p != nil
@@ -160,118 +171,91 @@ func (g *GinStarter) Start() (any, error) {
 	config.GlobalPostInterceptors = coll.SliceFilter(config.GlobalPostInterceptors, func(p PostInterceptor) bool {
 		return p != nil
 	})
-	// 注册全局前置拦截器批处理中间件
-	if len(config.GlobalPreInterceptors) > 0 {
-		ginEngine.Use(func(ctx *gin.Context) {
-			for i := range config.GlobalPreInterceptors {
-				interceptor := config.GlobalPreInterceptors[i]
-				response, continuePreInterceptor, continueHandler := interceptor(&Request{ctx: ctx})
-				currentHandler, ok := ctx.Get(ginCtxKeyContinueHandler)
-				if !(ok && !currentHandler.(bool)) {
-					ctx.Set(ginCtxKeyContinueHandler, continueHandler)
-				}
-				if response != nil {
-					httpResponse(ctx, response)
-				}
-				if continuePreInterceptor {
-					continue
-				} else {
-					break
-				}
-			}
-			ctx.Next() // 一定保证运行下一个中间件
-		})
-	}
-	// 注册全局后置拦截器批处理中间件
+	// 响应管道必须位于最外层，负责一次性提交最终 Response。
+	ginEngine.Use(responsePipelineHandler())
+	// 全局前置与后置拦截器使用同一中间件，确保前置短路时仍会执行对应后置拦截器。
 	ginEngine.Use(func(ctx *gin.Context) {
-		v, exists := ctx.Get(ginCtxKeyContinueHandler)
-		if !exists {
-			ctx.Next()
-		} else {
-			if v.(bool) {
-				ctx.Next()
-			}
+		defer recoverResponse(ctx)
+		state := getRequestState(ctx)
+		runPreInterceptors(ctx, config.GlobalPreInterceptors)
+		if !state.stopped {
+			nextWithRecovery(ctx)
 		}
-		if len(config.GlobalPostInterceptors) > 0 {
-			var response Response
-			var newResponse Response
-			var continuePostInterceptor bool
-			currentResponse, exists := ctx.Get(ginCtxKeyCurrentResponse)
-			if exists && currentResponse != nil {
-				response = currentResponse.(Response)
-			}
-			for i := range config.GlobalPostInterceptors {
-				interceptor := config.GlobalPostInterceptors[i]
-				newResponse, continuePostInterceptor = interceptor(&Request{ctx: ctx}, response)
-				if newResponse != nil {
-					response = newResponse
-				}
-				if continuePostInterceptor {
-					continue
-				}
-				break
-			}
-			if response != nil {
-				httpResponse(ctx, response)
-			}
-		}
+		normalizeResponse(ctx)
+		runPostInterceptors(ctx, config.GlobalPostInterceptors)
+	})
+
+	ginEngine.NoRoute(func(ctx *gin.Context) {
+		setResponse(ctx, RespHTTPStatusCode(http.StatusNotFound))
+	})
+	ginEngine.NoMethod(func(ctx *gin.Context) {
+		setResponse(ctx, RespHTTPStatusCode(http.StatusMethodNotAllowed))
 	})
 
 	config.Routers = coll.SliceFilter(config.Routers, func(r Router) bool {
 		return r != nil
 	})
 	if len(config.Routers) > 0 {
-		registerRouter(ginEngine, config.Routers)
+		if err = registerRouter(ginEngine, config.Routers); err != nil {
+			clearGinState()
+			return nil, err
+		}
 	}
 
 	if config.ListenAddress == "" {
 		config.ListenAddress = ":8080"
 	}
 
-	server = &http.Server{
+	var listener net.Listener
+	if config.UseReusePortModel {
+		listener, err = reuseport.Listen("tcp", config.ListenAddress)
+	} else {
+		listener, err = net.Listen("tcp", config.ListenAddress)
+	}
+	if err != nil {
+		clearGinState()
+		return nil, err
+	}
+
+	currentServer := &http.Server{
 		Addr:    config.ListenAddress,
 		Handler: ginEngine,
 	}
+	server = currentServer
 
-	errChn := make(chan error)
 	go func() {
-		if config.UseReusePortModel {
-			listener, err := reuseport.Listen("tcp", config.ListenAddress)
-			if err != nil {
-				errChn <- err
-			} else {
-				if err = server.Serve(listener); err != nil {
-					errChn <- err
-				}
-			}
-		} else {
-			if err = server.ListenAndServe(); err != nil {
-				errChn <- err
-			}
+		if serveErr := currentServer.Serve(listener); serveErr != nil && serveErr != http.ErrServerClosed {
+			logrus.Errorln("gin server stopped unexpectedly:", serveErr)
 		}
 	}()
-
-	select {
-	case <-time.After(time.Second):
-		return ginEngine, nil
-	case err = <-errChn:
-		return ginEngine, err
-	}
+	return ginEngine, nil
 }
 
 func (g *GinStarter) Stop(maxWaitTime time.Duration) (gracefully, stopped bool, err error) {
+	currentServer := server
+	if currentServer == nil {
+		return false, true, ErrGinServerNotStarted
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), maxWaitTime)
 	defer cancel()
-	if err = server.Shutdown(ctx); err != nil {
+	if err = currentServer.Shutdown(ctx); err != nil {
 		gracefully = false
+		stopped = false
 	} else {
 		gracefully = true
+		stopped = true
+		clearGinState()
 	}
-	stopped = !net.Telnet(g.getConfig().ListenAddress, time.Second)
 	return
 }
 
 // RawGinEngine 获取原始的gin引擎实例
 func RawGinEngine() *gin.Engine {
 	return ginEngine
+}
+
+func clearGinState() {
+	server = nil
+	ginEngine = nil
+	ginConfig = nil
 }

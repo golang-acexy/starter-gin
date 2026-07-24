@@ -21,7 +21,7 @@ import (
 var starterLoader *parent.StarterLoader
 
 func init() {
-	logger.SetTraceIdSupplier(&traceId{})
+	logger.SetTraceIdSupplier(&traceID{})
 	logger.EnableConsoleWithFormatter(logger.TraceLevel, logger.NewFormatter(func(traceSupplier logger.TraceIdSupplier, entry *logrus.Entry) ([]byte, error) {
 		// 格式化时间戳，保留毫秒部分
 		timestamp := entry.Time.Format("2006-01-02 15:04:05.000")
@@ -41,33 +41,37 @@ func init() {
 	logger.EnableFileWithJson(logger.TraceLevel)
 }
 
-type traceId struct {
+type traceID struct {
 }
 
-func (t *traceId) SetTraceId(s string) {
+func (t *traceID) SetTraceId(s string) {
 
 }
 
-func (t *traceId) GetTraceId() string {
+func (t *traceID) GetTraceId() string {
 	return "traceId"
 }
 
 // 默认Gin表现行为
 // 启用了非200状态码自动包裹响应
 func TestGinDefault(t *testing.T) {
-	starterLoader = parent.NewStarterLoader([]parent.Starter{
+	starterLoader = parent.InitStarterLoader([]parent.Starter{
 		&ginstarter.GinStarter{
 			Config: ginstarter.GinConfig{
-				ListenAddress:     ":8080",
-				UseReusePortModel: true,
-				DebugModule:       true,
+				ListenAddress:       ":8080",
+				UseReusePortModel:   true,
+				DebugModule:         true,
+				MaxRequestBodyBytes: 4 << 10,
 				Routers: []ginstarter.Router{
 					&router.DemoRouter{},
 					&router.ParamRouter{},
 					&router.AbortRouter{},
 					&router.BasicAuthRouter{},
 					&router.MyRestRouter{},
+					&router.InterceptorTestRouter{},
 				},
+				GlobalPreInterceptors:  router.InterceptorTestGlobalPreInterceptors(),
+				GlobalPostInterceptors: router.InterceptorTestGlobalPostInterceptors(),
 				InitFunc: func(instance *gin.Engine) {
 					instance.GET("/ping", func(context *gin.Context) {
 						context.String(http.StatusOK, "alive")
@@ -93,16 +97,20 @@ func TestGinDefault(t *testing.T) {
 func TestGinCustomer(t *testing.T) {
 	starter := &ginstarter.GinStarter{
 		Config: ginstarter.GinConfig{
-			ListenAddress:     ":8080",
-			UseReusePortModel: true,
-			DebugModule:       true,
+			ListenAddress:       ":8080",
+			UseReusePortModel:   true,
+			DebugModule:         true,
+			MaxRequestBodyBytes: 4 << 10,
 			Routers: []ginstarter.Router{
 				&router.DemoRouter{},
 				&router.ParamRouter{},
 				&router.AbortRouter{},
 				&router.BasicAuthRouter{},
 				&router.MyRestRouter{},
+				&router.InterceptorTestRouter{},
 			},
+			GlobalPreInterceptors:  router.InterceptorTestGlobalPreInterceptors(),
+			GlobalPostInterceptors: router.InterceptorTestGlobalPostInterceptors(),
 			HidePanicErrorDetails: false,
 			InitFunc: func(instance *gin.Engine) {
 				instance.GET("/ping", func(context *gin.Context) {
@@ -112,48 +120,12 @@ func TestGinCustomer(t *testing.T) {
 					context.Status(500)
 				})
 			},
-			DisableBadHttpCodeResolver:   true,
-			DisableDefaultIgnoreHttpCode: true,
+			DisableBadHTTPCodeResolver:   true,
+			DisableDefaultIgnoreHTTPCode: true,
 			DisableMethodNotAllowedError: false,
-			//GlobalPreInterceptors: []ginstarter.PreInterceptor{
-			//	func(request *ginstarter.Request) (ginstarter.Response, bool, bool) {
-			//		t, _ := request.GetQueryParam("t")
-			//		if t == "" {
-			//			logger.Logrus().Infoln("前置A 不继续执行 忽略其他中间件")
-			//			return ginstarter.RespTextPlain([]byte("interceptor"), http.StatusOK), false, false
-			//		} else {
-			//			logger.Logrus().Infoln("前置A 继续执行 不忽略其他中间件")
-			//			return nil, true, true
-			//		}
-			//	},
-			//	func(request *ginstarter.Request) (ginstarter.Response, bool, bool) {
-			//		logger.Logrus().Infoln("前置B 继续执行 不忽略其他中间件")
-			//		return nil, true, true
-			//	},
-			//},
-			//GlobalPostInterceptors: []ginstarter.PostInterceptor{
-			//	func(request *ginstarter.Request, response ginstarter.Response) (ginstarter.Response, bool) {
-			//		if response != nil {
-			//			logger.Logrus().Infoln("响应拦截器 拦截响应", response.Data().ToDebugString())
-			//		}
-			//		t, _ := request.GetQueryParam("t")
-			//		if t == "" {
-			//			logger.Logrus().Infoln("后置A 继续执行 不忽略其他中间件")
-			//			return nil, true
-			//		} else {
-			//			logger.Logrus().Infoln("后置A 不继续执行 忽略其他中间件")
-			//			return nil, false
-			//		}
-			//	},
-			//	func(request *ginstarter.Request, response ginstarter.Response) (ginstarter.Response, bool) {
-			//		logger.Logrus().Infoln("后置B interceptor 2 执行")
-			//		panic("error")
-			//		return nil, true
-			//	},
-			//},
 		},
 	}
-	loader := parent.NewStarterLoader([]parent.Starter{starter})
+	loader := parent.InitStarterLoader([]parent.Starter{starter})
 
 	err := loader.Start()
 	if err != nil {
@@ -165,7 +137,7 @@ func TestGinCustomer(t *testing.T) {
 }
 
 func TestGinLoadAndUnload(t *testing.T) {
-	starterLoader = parent.NewStarterLoader([]parent.Starter{
+	starterLoader = parent.InitStarterLoader([]parent.Starter{
 		&ginstarter.GinStarter{
 			Config: ginstarter.GinConfig{
 				ListenAddress: ":8080",
@@ -179,7 +151,7 @@ func TestGinLoadAndUnload(t *testing.T) {
 		return
 	}
 	time.Sleep(time.Second * 5)
-	stopResult, err := starterLoader.StopBySetting()
+	stopResult, err := starterLoader.StopAllBySetting()
 	if err != nil {
 		fmt.Printf("%+v\n", err)
 		return

@@ -1,7 +1,6 @@
 package ginstarter
 
 import (
-	"errors"
 	"net/http"
 
 	"github.com/acexy/golang-toolkit/logger"
@@ -78,9 +77,11 @@ func (r *RouterWrapper) MATCH1(method []string, path string, contentType []strin
 func (r *RouterWrapper) handler(methods []string, path string, contentType []string, handlerWrapper ...HandlerWrapper) {
 	handlers := make([]gin.HandlerFunc, len(handlerWrapper))
 	for i, handler := range handlerWrapper {
+		handler := handler
 		handlers[i] = func(context *gin.Context) {
-			v, exists := context.Get(ginCtxKeyContinueHandler)
-			if exists && !v.(bool) {
+			defer recoverResponse(context)
+			state := getRequestState(context)
+			if state.stopped {
 				return
 			}
 			if context.IsAborted() {
@@ -88,22 +89,26 @@ func (r *RouterWrapper) handler(methods []string, path string, contentType []str
 				return
 			}
 			if len(contentType) > 0 {
-				if !isMatchMediaType(contentType, context.ContentType()) {
+				if !isMatchMediaType(contentType, context.GetHeader("Content-Type")) {
 					panic(&internalPanic{
 						statusCode: http.StatusUnsupportedMediaType,
-						rawError:   errors.New(statusMessageMediaTypeNotAllowed),
+						rawError:   ErrMediaTypeNotAllowed,
 					})
 				}
 			}
 			response, err := handler(&Request{context})
 			if err != nil {
-				context.Status(http.StatusInternalServerError)
 				panic(err)
 			}
+			if nativeResponseWritten(context) {
+				state.stopped = true
+				context.Abort()
+				return
+			}
 			if response != nil {
-				httpResponse(context, response)
-			} else {
-				context.Status(http.StatusOK)
+				state.response = response
+				state.stopped = true
+				context.Abort()
 			}
 		}
 	}

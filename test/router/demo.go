@@ -40,8 +40,8 @@ func (d *DemoRouter) more() ginstarter.HandlerWrapper {
 	return func(request *ginstarter.Request) (ginstarter.Response, error) {
 		fmt.Println("invoke")
 		// 通过Builder来响应自定义Rest数据 并设置其他http属性
-		return ginstarter.NewRespRest().DataBuilder(func() *ginstarter.ResponseData {
-			return ginstarter.NewEmptyResponseData().SetStatusCode(http.StatusAccepted).SetData([]byte("success")).AddHeader("test", "test")
+		return ginstarter.NewRespRest().DataBuilder(func() *ginstarter.ResponseEntity {
+			return ginstarter.NewEmptyResponseEntity().SetStatusCode(http.StatusAccepted).SetBody([]byte("success")).AddHeader("test", "test")
 		}), nil
 	}
 }
@@ -87,15 +87,15 @@ func (d *DemoRouter) empty() ginstarter.HandlerWrapper {
 
 func (d *DemoRouter) redirect() ginstarter.HandlerWrapper {
 	return func(request *ginstarter.Request) (ginstarter.Response, error) {
-		request.RawGinContext().Redirect(http.StatusMovedPermanently, "https://google.com")
+		request.GinContext().Redirect(http.StatusMovedPermanently, "https://google.com")
 		return nil, nil
 	}
 }
 
 func (d *DemoRouter) common() ginstarter.HandlerWrapper {
 	return func(request *ginstarter.Request) (ginstarter.Response, error) {
-		return ginstarter.NewCommonResp().DataBuilder(func() *ginstarter.ResponseData {
-			return ginstarter.NewEmptyResponseData().SetData([]byte("success"))
+		return ginstarter.NewCommonResp().DataBuilder(func() *ginstarter.ResponseEntity {
+			return ginstarter.NewEmptyResponseEntity().SetBody([]byte("success"))
 		}), nil
 	}
 }

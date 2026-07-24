@@ -22,9 +22,13 @@ type Router interface {
 	Handlers(router *RouterWrapper)
 }
 
-func registerRouter(ginEngine *gin.Engine, routers []Router) {
+func registerRouter(ginEngine *gin.Engine, routers []Router) error {
 	for _, router := range routers {
-		routerInfo := router.Info()
+		info := router.Info()
+		if info == nil {
+			return ErrRouterInfoNil
+		}
+		routerInfo := info
 		group := ginEngine.Group(routerInfo.GroupPath)
 
 		routerInfo.PreInterceptors = coll.SliceFilter(routerInfo.PreInterceptors, func(p PreInterceptor) bool {
@@ -35,57 +39,18 @@ func registerRouter(ginEngine *gin.Engine, routers []Router) {
 		})
 
 		if len(routerInfo.PreInterceptors) != 0 || len(routerInfo.PostInterceptors) != 0 {
-			if len(routerInfo.PreInterceptors) > 0 {
-				group.Use(func(ctx *gin.Context) {
-					// 有group级别的前置拦截器
-					for i := range routerInfo.PreInterceptors {
-						currentHandler, ok := ctx.Get(ginCtxKeyContinueHandler)
-						response, continuePreInterceptor, continueHandler := routerInfo.PreInterceptors[i](&Request{ctx: ctx})
-						if !(ok && !currentHandler.(bool)) {
-							ctx.Set(ginCtxKeyContinueHandler, continueHandler)
-						}
-						if response != nil {
-							httpResponse(ctx, response)
-						}
-						if continuePreInterceptor {
-							continue
-						} else {
-							break
-						}
-					}
-					ctx.Next()
-				})
-			}
 			group.Use(func(ctx *gin.Context) {
-				v, exists := ctx.Get(ginCtxKeyContinueHandler)
-				if !exists || v.(bool) {
-					ctx.Next()
+				defer recoverResponse(ctx)
+				state := getRequestState(ctx)
+				runPreInterceptors(ctx, routerInfo.PreInterceptors)
+				if !state.stopped {
+					nextWithRecovery(ctx)
 				}
-				if len(routerInfo.PostInterceptors) > 0 {
-					var response Response
-					var newResponse Response
-					var continuePostInterceptor bool
-					currentResponse, exists := ctx.Get(ginCtxKeyCurrentResponse)
-					if exists && currentResponse != nil {
-						response = currentResponse.(Response)
-					}
-					for i := range routerInfo.PostInterceptors {
-						interceptor := routerInfo.PostInterceptors[i]
-						newResponse, continuePostInterceptor = interceptor(&Request{ctx: ctx}, response)
-						if newResponse != nil {
-							response = newResponse
-						}
-						if continuePostInterceptor {
-							continue
-						}
-						break
-					}
-					if response != nil {
-						httpResponse(ctx, response)
-					}
-				}
+				normalizeResponse(ctx)
+				runPostInterceptors(ctx, routerInfo.PostInterceptors)
 			})
 		}
 		router.Handlers(&RouterWrapper{routerGroup: group})
 	}
+	return nil
 }

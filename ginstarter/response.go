@@ -5,391 +5,346 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/acexy/golang-toolkit/logger"
 	"github.com/acexy/golang-toolkit/util/json"
 	"github.com/gin-gonic/gin"
 )
 
-// Response 标准响应 用户可以通过自定义实现该接口定义自己的响应结构体
-// 也可以使用NewRespRest来创建自定义响应结构体
+// Response 标准响应，用户可以通过实现该接口定义自己的响应类型。
+// 也可以使用 NewRespRest 创建响应。
 type Response interface {
-
-	// Data 响应的Body数据
-	Data() *ResponseData
+	// Data 返回完整响应实体，包含状态码、Content-Type、Header、Cookie 和 Body。
+	Data() *ResponseEntity
 }
 
-// ResponseDataStructDecoder 针对Response.Data() 响应的时结构体数据时的解码为[]byte功能
-// 默认为JSON解码器 用户可以自定义实现该接口 实现自定义解码器
-type ResponseDataStructDecoder interface {
-	// Decode 解析响应数据
-	Decode(response any) ([]byte, error)
+// ResponseBodyEncoder 将结构化响应正文编码为字节数据。
+// 默认使用 JSON 编码器，用户可以通过实现该接口提供自定义编码方式。
+type ResponseBodyEncoder interface {
+	// Encode 编码响应正文。
+	Encode(body any) ([]byte, error)
 }
 
-// 默认解码器
-type responseJsonDataStructDecoder struct {
+// 默认 JSON 响应正文编码器。
+type jsonResponseBodyEncoder struct {
 }
 
-func (r responseJsonDataStructDecoder) Decode(data any) ([]byte, error) {
-	return json.ToBytesError(data)
+func (r jsonResponseBodyEncoder) Encode(body any) ([]byte, error) {
+	return json.ToBytesError(body)
 }
 
-func httpResponse(context *gin.Context, response Response) {
+func currentResponseBodyEncoder() ResponseBodyEncoder {
+	if ginConfig != nil && ginConfig.ResponseBodyEncoder != nil {
+		return ginConfig.ResponseBodyEncoder
+	}
+	return jsonResponseBodyEncoder{}
+}
+
+// writeResponse 是框架托管响应的唯一写入点。
+func writeResponse(context *gin.Context, response Response) {
 	if response == nil {
+		context.Status(http.StatusOK)
 		return
 	}
-	context.Set(ginCtxKeyCurrentResponse, response)
+	responseEntity := response.Data()
+	if responseEntity == nil {
+		context.Status(http.StatusOK)
+		return
+	}
 
 	// 是否启用traceId响应
-	if ginConfig.TraceIdResponse != nil {
-		context.Header("Trace-Id", ginConfig.TraceIdResponse())
+	if ginConfig.TraceIDResponse != nil {
+		context.Header("Trace-Id", ginConfig.TraceIDResponse())
 	}
 
-	responseData := response.Data()
-	if responseData == nil {
-		return
+	contentType := responseEntity.contentType
+	if contentType == "" && len(responseEntity.body) > 0 {
+		contentType = http.DetectContentType(responseEntity.body)
 	}
 
-	contentType := responseData.contentType
-	if contentType == "" {
-		contentType = gin.MIMEJSON
-	}
-
-	httpStatusCode := responseData.statusCode
+	httpStatusCode := responseEntity.statusCode
 	if httpStatusCode == 0 {
 		httpStatusCode = http.StatusOK
 	}
 
-	cookies := responseData.cookies
+	cookies := responseEntity.cookies
 	if len(cookies) > 0 {
-		for _, v := range cookies {
-			context.SetCookie(v.name, v.value, v.maxAge, v.path, v.domain, v.secure, v.httpOnly)
+		for _, cookie := range cookies {
+			if cookie != nil {
+				http.SetCookie(context.Writer, cookie)
+			}
 		}
 	}
 
-	headers := responseData.headers
+	headers := responseEntity.headers
 	if len(headers) > 0 {
-		for _, v := range headers {
-			context.Header(v.name, v.value)
+		for name, values := range headers {
+			for _, value := range values {
+				context.Writer.Header().Add(name, value)
+			}
 		}
 	}
 
-	data := responseData.data
-	writer := context.Writer
-	if w, ok := writer.(*responseRewriter); ok {
-		w.Rest() // 重置响应体
-	}
-	context.Data(httpStatusCode, contentType, data)
-	if context.ContentType() != contentType {
-		context.Header("Content-Type", contentType)
-	}
+	context.Data(httpStatusCode, contentType, responseEntity.body)
 }
 
-// 支持将gin statusCode重写的响应处理器
-type responseRewriter struct {
-	gin.ResponseWriter
-	body       *bytes.Buffer
-	statusCode int
-}
-
-func (r *responseRewriter) WriteHeader(code int) {
-	r.statusCode = code
-}
-
-func (r *responseRewriter) Write(data []byte) (int, error) {
-	return r.body.Write(data)
-}
-
-func (r *responseRewriter) WriteHeaderNow() {
-	if !r.Written() {
-		r.ResponseWriter.WriteHeader(r.statusCode)
-	}
-}
-
-func (r *responseRewriter) Status() int {
-	return r.statusCode
-}
-
-func (r *responseRewriter) Rest() {
-	if r.body.Len() > 0 {
-		r.body.Reset()
-	}
-}
-
-// ResponseData 标准响应数据内容
-type ResponseData struct {
+// ResponseEntity 完整响应实体，描述框架最终写入客户端的全部响应信息。
+type ResponseEntity struct {
 	// body响应体负载数据
-	data []byte
+	body []byte
 	// ContentType 响应的ContentType
 	contentType string
 	// 响应状态码
 	statusCode int
 	// 响应头
-	headers []*ResponseHeader
+	headers http.Header
 	// 响应Cookie
-	cookies []*ResponseCookie
+	cookies []*http.Cookie
 }
 
-// ResponseHeader 响应头
-type ResponseHeader struct {
-	name string
-	// 设置零值可以清除该Name响应头
-	value string
+func NewEmptyResponseEntity() *ResponseEntity {
+	return &ResponseEntity{}
 }
 
-// ResponseCookie 响应Cookie
-type ResponseCookie struct {
-	name     string
-	value    string
-	maxAge   int
-	path     string
-	domain   string
-	secure   bool
-	httpOnly bool
-}
-
-func NewEmptyResponseData() *ResponseData {
-	return &ResponseData{}
-}
-
-func NewResponseData(contentType string, body []byte) *ResponseData {
-	return &ResponseData{
+func NewResponseEntity(contentType string, body []byte) *ResponseEntity {
+	return &ResponseEntity{
 		contentType: contentType,
-		data:        body,
+		body:        body,
 	}
 }
 
-func NewResponseDataWithStatusCode(contentType string, body []byte, statusCode int) *ResponseData {
-	return &ResponseData{
+func NewResponseEntityWithStatusCode(contentType string, body []byte, statusCode int) *ResponseEntity {
+	return &ResponseEntity{
 		contentType: contentType,
-		data:        body,
+		body:        body,
 		statusCode:  statusCode,
 	}
 }
 
-func NewHeader(name, value string) *ResponseHeader {
-	return &ResponseHeader{name: name, value: value}
+func NewCookie(name, value string, maxAge int, path, domain string, secure, httpOnly bool) *http.Cookie {
+	return &http.Cookie{Name: name, Value: value, MaxAge: maxAge, Path: path, Domain: domain, Secure: secure, HttpOnly: httpOnly}
 }
 
-func NewCookie(name, value string, maxAge int, path, domain string, secure, httpOnly bool) *ResponseCookie {
-	return &ResponseCookie{name: name, value: value, maxAge: maxAge, path: path, domain: domain, secure: secure, httpOnly: httpOnly}
-}
-
-func (r *ResponseData) SetData(data []byte) *ResponseData {
-	r.data = data
+func (r *ResponseEntity) SetBody(body []byte) *ResponseEntity {
+	r.body = body
 	return r
 }
 
-func (r *ResponseData) SetContentType(contentType string) *ResponseData {
-	if r.contentType != "" {
-		logger.Logrus().Traceln("rewrite rest response content-type current =", r.contentType, "target =", contentType)
-	}
+func (r *ResponseEntity) SetContentType(contentType string) *ResponseEntity {
 	r.contentType = contentType
 	return r
 }
 
-func (r *ResponseData) SetStatusCode(statusCode int) *ResponseData {
+func (r *ResponseEntity) SetStatusCode(statusCode int) *ResponseEntity {
 	r.statusCode = statusCode
 	return r
 }
 
-func (r *ResponseData) AddHeaders(headers []*ResponseHeader) *ResponseData {
-	if len(r.headers) != 0 {
-		r.headers = append(r.headers, headers...)
-	} else {
-		r.headers = headers
+func (r *ResponseEntity) AddHeaders(headers http.Header) *ResponseEntity {
+	for name, values := range headers {
+		for _, value := range values {
+			r.AddHeader(name, value)
+		}
 	}
 	return r
 }
 
-func (r *ResponseData) AddHeader(name, value string) *ResponseData {
-	if len(r.headers) == 0 {
-		r.headers = []*ResponseHeader{{
-			name:  name,
-			value: value,
-		}}
-	} else {
-		r.headers = append(r.headers, &ResponseHeader{
-			name:  name,
-			value: value,
-		})
+// SetHeader 设置响应头，同名响应头的旧值会被覆盖。
+func (r *ResponseEntity) SetHeader(name, value string) *ResponseEntity {
+	if name == "" {
+		return r
+	}
+	if r.headers == nil {
+		r.headers = make(http.Header)
+	}
+	r.headers.Set(name, value)
+	return r
+}
+
+// AddHeader 添加响应头，同名响应头可以保留多个值。
+func (r *ResponseEntity) AddHeader(name, value string) *ResponseEntity {
+	if name == "" {
+		return r
+	}
+	if r.headers == nil {
+		r.headers = make(http.Header)
+	}
+	r.headers.Add(name, value)
+	return r
+}
+
+func (r *ResponseEntity) AddCookies(cookies []*http.Cookie) *ResponseEntity {
+	for _, cookie := range cookies {
+		if cookie != nil {
+			r.cookies = append(r.cookies, cookie)
+		}
 	}
 	return r
 }
 
-func (r *ResponseData) AddCookies(cookies []*ResponseCookie) *ResponseData {
-	if len(r.cookies) != 0 {
-		r.cookies = append(r.cookies, cookies...)
-	} else {
-		r.cookies = cookies
-	}
-	return r
-}
-
-func (r *ResponseData) AddCookie(cookie *ResponseCookie) *ResponseData {
-	if len(r.cookies) == 0 {
-		r.cookies = []*ResponseCookie{cookie}
-	} else {
+func (r *ResponseEntity) AddCookie(cookie *http.Cookie) *ResponseEntity {
+	if cookie != nil {
 		r.cookies = append(r.cookies, cookie)
 	}
 	return r
 }
 
-func (r *ResponseData) ToDebugString() string {
-	return fmt.Sprintf("body: %s head: %v content-type: %s", string(r.data), r.headers, r.contentType)
+func (r *ResponseEntity) DebugString(maxBodyBytes int) string {
+	body := r.body
+	truncated := false
+	if maxBodyBytes >= 0 && len(body) > maxBodyBytes {
+		body = body[:maxBodyBytes]
+		truncated = true
+	}
+	return fmt.Sprintf("status-code: %d body: %s body-length: %d truncated: %t headers: %v content-type: %s", r.statusCode, string(body), len(r.body), truncated, r.headers, r.contentType)
 }
 
-func (r *ResponseData) RawBody() []byte {
-	return r.data
+// Body 返回响应正文副本，避免调用方绕过 SetBody 修改内部数据。
+func (r *ResponseEntity) Body() []byte {
+	return bytes.Clone(r.body)
 }
 
-// restResp 默认的Rest响应结构体
-type restResp struct {
-	responseData *ResponseData
+// UnsafeRawBody 返回内部响应正文，仅用于确实需要原地修改的场景。
+func (r *ResponseEntity) UnsafeRawBody() []byte {
+	return r.body
 }
 
-func (r *restResp) Data() *ResponseData {
-	return r.responseData
+// responseImpl 是 REST 响应和普通响应共用的标准实现。
+type responseImpl struct {
+	responseEntity *ResponseEntity
+}
+
+func (r *responseImpl) Data() *ResponseEntity {
+	return r.responseEntity
 }
 
 // NewRespRest 创建一个Rest响应体
-func NewRespRest() *restResp {
-	resp := new(restResp)
-	resp.responseData = &ResponseData{}
-	resp.responseData.contentType = gin.MIMEJSON
-	return resp
+func NewRespRest() *responseImpl {
+	return &responseImpl{responseEntity: &ResponseEntity{contentType: gin.MIMEJSON}}
 }
 
-// DataBuilder 响应数据构造器
-func (r *restResp) DataBuilder(fn func() *ResponseData) Response {
-	r.responseData = fn()
+// NewCommonResp 创建一个普通响应。
+func NewCommonResp() *responseImpl {
+	return &responseImpl{responseEntity: &ResponseEntity{}}
+}
+
+// DataBuilder 使用构造函数替换完整响应实体。
+func (r *responseImpl) DataBuilder(fn func() *ResponseEntity) Response {
+	if fn == nil {
+		panic(ErrResponseEntityBuilderNil)
+	}
+	entity := fn()
+	if entity == nil {
+		panic(ErrResponseEntityNil)
+	}
+	r.responseEntity = entity
 	return r
 }
 
-// SetData 设置Rest标准的响应结构
-func (r *restResp) SetData(data any) *ResponseData {
-	bytes, err := ginConfig.ResponseDataStructDecoder.Decode(data)
+// SetBody 编码结构化正文并返回响应实体。
+func (r *responseImpl) SetBody(body any) *ResponseEntity {
+	bodyBytes, err := currentResponseBodyEncoder().Encode(body)
 	if err != nil {
 		panic(err)
 	}
-	r.responseData.data = bytes
-	return r.responseData
+	r.responseEntity.body = bodyBytes
+	return r.responseEntity
 }
 
-// SetDataResponse 设置Rest标准的响应结构 并返回响应体数据
-func (r *restResp) SetDataResponse(data any) Response {
-	bytes, err := ginConfig.ResponseDataStructDecoder.Decode(data)
+// SetBodyResponse 编码结构化正文并返回标准响应。
+func (r *responseImpl) SetBodyResponse(body any) Response {
+	bodyBytes, err := currentResponseBodyEncoder().Encode(body)
 	if err != nil {
 		panic(err)
 	}
-	r.responseData.data = bytes
+	r.responseEntity.body = bodyBytes
 	return r
 }
 
-// ToResponse 转换为响应体数据
-func (r *restResp) ToResponse() Response {
+// SetEntity 设置完整响应实体并返回该实体。
+func (r *responseImpl) SetEntity(entity *ResponseEntity) *ResponseEntity {
+	if entity == nil {
+		panic(ErrResponseEntityNil)
+	}
+	r.responseEntity = entity
+	return r.responseEntity
+}
+
+// SetEntityResponse 设置完整响应实体并返回标准响应。
+func (r *responseImpl) SetEntityResponse(entity *ResponseEntity) Response {
+	r.SetEntity(entity)
 	return r
 }
 
 // RespRestRaw 响应标准格式的Rest原始数据
 func RespRestRaw(dataRest *RestRespStruct) Response {
-	return NewRespRest().SetDataResponse(dataRest)
+	return NewRespRest().SetBodyResponse(dataRest)
 }
 
 // RespRestSuccess 响应标准格式的Rest成功数据
 func RespRestSuccess(data ...any) Response {
-	return NewRespRest().SetDataResponse(NewRestSuccess(data...))
+	return NewRespRest().SetBodyResponse(NewRestSuccess(data...))
 }
 
 // RespRestException 响应标准格式的Rest系统异常错误
 func RespRestException(statusMessage ...string) Response {
-	return NewRespRest().SetDataResponse(NewRestException(statusMessage...))
+	return NewRespRest().SetBodyResponse(NewRestException(statusMessage...))
 }
 
 // RespRestBadParameters 响应标准格式的Rest参数错误
 func RespRestBadParameters(statusMessage ...string) Response {
-	return NewRespRest().SetDataResponse(NewRestBadParameters(statusMessage...))
+	return NewRespRest().SetBodyResponse(NewRestBadParameters(statusMessage...))
 }
 
-// RespRestUnAuthorized 响应标准格式的Rest未授权错误
-func RespRestUnAuthorized(statusMessage ...string) Response {
-	return NewRespRest().SetDataResponse(NewRestUnauthorized(statusMessage...))
+// RespRestUnauthorized 响应标准格式的 REST 未授权错误。
+func RespRestUnauthorized(statusMessage ...string) Response {
+	return NewRespRest().SetBodyResponse(NewRestUnauthorized(statusMessage...))
 }
 
 // RespRestStatusError 响应标准格式的Rest状态错误
 func RespRestStatusError(statusCode StatusCode, statusMessage ...StatusMessage) Response {
-	return NewRespRest().SetDataResponse(NewRestStatusError(statusCode, statusMessage...))
+	return NewRespRest().SetBodyResponse(NewRestStatusError(statusCode, statusMessage...))
 }
 
 // RespRestBizError 响应标准格式的Rest业务错误
 func RespRestBizError(bizErrorCode BizErrorCode, bizErrorMessage BizErrorMessage) Response {
-	return NewRespRest().SetDataResponse(NewRestBizError(bizErrorCode, bizErrorMessage))
+	return NewRespRest().SetBodyResponse(NewRestBizError(bizErrorCode, bizErrorMessage))
 }
 
-// commonResp 普通响应
-type commonResp struct {
-	responseData *ResponseData
+// RespHTTPStatusCode 设置响应状态码。
+func RespHTTPStatusCode(statusCode int) Response {
+	return NewCommonResp().SetEntityResponse(NewEmptyResponseEntity().SetStatusCode(statusCode))
 }
 
-func (c *commonResp) Data() *ResponseData {
-	return c.responseData
+// RespJSON 将结构化正文编码为 JSON 响应。
+func RespJSON(body any, httpStatusCode ...int) Response {
+	bodyBytes, err := currentResponseBodyEncoder().Encode(body)
+	if err != nil {
+		panic(err)
+	}
+	return RespJSONRaw(bodyBytes, httpStatusCode...)
 }
 
-// NewCommonResp 创建一个普通响应
-func NewCommonResp() *commonResp {
-	resp := new(commonResp)
-	resp.responseData = &ResponseData{}
-	return resp
-}
-
-// DataBuilder 响应数据构造器
-func (c *commonResp) DataBuilder(fn func() *ResponseData) Response {
-	c.responseData = fn()
-	return c
-}
-
-// SetData 响应数据
-func (c *commonResp) SetData(data *ResponseData) *ResponseData {
-	c.responseData = data
-	return c.responseData
-}
-
-// SetDataToResponse 响应数据
-func (c *commonResp) SetDataToResponse(data *ResponseData) Response {
-	c.responseData = data
-	return c
-}
-
-// ToResponse 转换为响应体数据
-func (c *commonResp) ToResponse() Response {
-	return c
-}
-
-// RespHttpStatusCode 设置响应状态码
-func RespHttpStatusCode(statusCode int) Response {
-	return &commonResp{NewEmptyResponseData().SetStatusCode(statusCode)}
-}
-
-// RespJson 响应Json数据
-func RespJson(data []byte, httpStatusCode ...int) Response {
-	respData := NewEmptyResponseData()
-	respData.SetData(data)
+// RespJSONRaw 响应已经编码完成的 JSON 数据。
+func RespJSONRaw(body []byte, httpStatusCode ...int) Response {
+	respData := NewEmptyResponseEntity()
+	respData.SetBody(body)
 	statusCode := http.StatusOK
 	respData.SetContentType(gin.MIMEJSON)
 	if len(httpStatusCode) > 0 {
 		statusCode = httpStatusCode[0]
 	}
 	respData.SetStatusCode(statusCode)
-	return NewCommonResp().SetDataToResponse(respData)
+	return NewCommonResp().SetEntityResponse(respData)
 }
 
+// RespTextPlain 响应Text数据
 func RespTextPlain(data []byte, httpStatusCode ...int) Response {
-	respData := NewEmptyResponseData()
-	respData.SetData(data)
+	respData := NewEmptyResponseEntity()
+	respData.SetBody(data)
 	statusCode := http.StatusOK
 	respData.SetContentType(gin.MIMEPlain)
 	if len(httpStatusCode) > 0 {
 		statusCode = httpStatusCode[0]
 	}
 	respData.SetStatusCode(statusCode)
-	return NewCommonResp().SetDataToResponse(respData)
+	return NewCommonResp().SetEntityResponse(respData)
 }

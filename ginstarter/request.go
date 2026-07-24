@@ -1,13 +1,15 @@
 package ginstarter
 
 import (
+	"bytes"
 	"errors"
+	"fmt"
+	"io"
+	"mime"
 	"mime/multipart"
 	"net/http"
-	"path/filepath"
 	"strings"
 
-	"github.com/acexy/golang-toolkit/logger"
 	"github.com/acexy/golang-toolkit/math/conversion"
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
@@ -17,18 +19,18 @@ type Request struct {
 	ctx *gin.Context
 }
 
-// RawGinContext 获取原始Gin上下文
-func (r *Request) RawGinContext() *gin.Context {
+// GinContext 获取原始 Gin 上下文。
+func (r *Request) GinContext() *gin.Context {
 	return r.ctx
 }
 
-// HttpMethod 获取请求方法
-func (r *Request) HttpMethod() string {
+// Method 获取 HTTP 请求方法。
+func (r *Request) Method() string {
 	return r.ctx.Request.Method
 }
 
-// RouterFullPath 当前请求的注册路由路径
-func (r *Request) RouterFullPath() string {
+// RoutePattern 获取当前请求匹配的注册路由模式，例如 /users/:id。
+func (r *Request) RoutePattern() string {
 	return r.ctx.FullPath()
 }
 
@@ -37,8 +39,8 @@ func (r *Request) RequestPath() string {
 	return r.ctx.Request.URL.Path
 }
 
-// RequestFullPath 获取请求完整路径
-func (r *Request) RequestFullPath() string {
+// RequestURI 获取请求 URI，包含路径和查询参数。
+func (r *Request) RequestURI() string {
 	return r.ctx.Request.URL.RequestURI()
 }
 
@@ -47,13 +49,13 @@ func (r *Request) Host() string {
 	return r.ctx.Request.Host
 }
 
-// Proto 获取请求协议
-func (r *Request) Proto() string {
+// Protocol 获取请求协议，例如 HTTP/1.1 或 HTTP/2.0。
+func (r *Request) Protocol() string {
 	return r.ctx.Request.Proto
 }
 
-// RequestIP 尝试获取请求方客户端IP
-func (r *Request) RequestIP() string {
+// ClientIP 尝试获取客户端 IP。
+func (r *Request) ClientIP() string {
 	return r.ctx.ClientIP()
 }
 
@@ -83,13 +85,7 @@ func (r *Request) BindPathParams(object any) error {
 // MustBindPathParams /:id 绑定结构体用于接收UriPath参数 结构体标签格式 `uri:""`
 // 任何错误将触发Panic流程中断
 func (r *Request) MustBindPathParams(object any) {
-	err := r.BindPathParams(object)
-	if err != nil {
-		panic(&internalPanic{
-			rawError:   err,
-			statusCode: http.StatusBadRequest,
-		})
-	}
+	panicRequestError(r.BindPathParams(object), http.StatusBadRequest)
 }
 
 // --------------- query 参数
@@ -104,10 +100,7 @@ func (r *Request) GetQueryParam(name string) (string, bool) {
 func (r *Request) MustGetQueryParam(name string) string {
 	v, ok := r.GetQueryParam(name)
 	if !ok {
-		panic(&internalPanic{
-			statusCode: http.StatusBadRequest,
-			rawError:   errors.New("param name = " + name + " not set"),
-		})
+		panicRequestError(paramNotSetError(name), http.StatusBadRequest)
 	}
 	return v
 }
@@ -137,10 +130,7 @@ func (r *Request) MustGetQueryParams(names ...string) map[string]string {
 			if ok {
 				result[name] = v
 			} else {
-				panic(&internalPanic{
-					statusCode: http.StatusBadRequest,
-					rawError:   errors.New("param name = " + name + " not set"),
-				})
+				panicRequestError(paramNotSetError(name), http.StatusBadRequest)
 			}
 		}
 	}
@@ -157,10 +147,7 @@ func (r *Request) GetQueryParamArray(name string) ([]string, bool) {
 func (r *Request) MustGetQueryParamArray(name string) []string {
 	value, ok := r.GetQueryParamArray(name)
 	if !ok {
-		panic(&internalPanic{
-			statusCode: http.StatusBadRequest,
-			rawError:   errors.New("param name = " + name + " not set"),
-		})
+		panicRequestError(paramNotSetError(name), http.StatusBadRequest)
 	}
 	return value
 }
@@ -175,10 +162,7 @@ func (r *Request) GetQueryParamMap(name string) (map[string]string, bool) {
 func (r *Request) MustGetQueryParamMap(name string) map[string]string {
 	v, ok := r.GetQueryParamMap(name)
 	if !ok {
-		panic(&internalPanic{
-			statusCode: http.StatusBadRequest,
-			rawError:   errors.New("param name = " + name + " not set"),
-		})
+		panicRequestError(paramNotSetError(name), http.StatusBadRequest)
 	}
 	return v
 }
@@ -191,84 +175,104 @@ func (r *Request) BindQueryParams(object any) error {
 // MustBindQueryParams 绑定结构体用于接收Query参数以及POST表单符合条件的数据
 // 任何错误将触发Panic流程中断
 func (r *Request) MustBindQueryParams(object any) {
-	err := r.BindQueryParams(object)
-	if err != nil {
-		panic(&internalPanic{
-			statusCode: http.StatusBadRequest,
-			rawError:   err,
-		})
-	}
+	panicRequestError(r.BindQueryParams(object), http.StatusBadRequest)
 }
 
 // --------------- body 参数
 
-// BindBodyJson 将请求body数据绑定到json结构体中
-func (r *Request) BindBodyJson(object any) error {
-	return r.ctx.ShouldBindJSON(object)
-}
-
-// MustBindBodyJson 将请求body数据绑定到json结构体中
-// 任何错误将触发Panic流程中断
-func (r *Request) MustBindBodyJson(object any) {
-	err := r.BindBodyJson(object)
+// BindBodyJSON 将请求正文绑定到 JSON 结构体中。
+func (r *Request) BindBodyJSON(object any) error {
+	body, err := r.GetRawBodyData()
 	if err != nil {
-		panic(&internalPanic{
-			statusCode: http.StatusBadRequest,
-			rawError:   err,
-		})
+		return err
 	}
+	return binding.JSON.BindBody(body, object)
 }
 
-// BindBodyForm 将请求body表单数据绑定到from结构体中
+// MustBindBodyJSON 将请求正文绑定到 JSON 结构体中。
+// 任何错误将触发Panic流程中断
+func (r *Request) MustBindBodyJSON(object any) {
+	panicRequestError(r.BindBodyJSON(object), http.StatusBadRequest)
+}
+
+// BindBodyForm 将 urlencoded 或 multipart 请求正文绑定到结构体中。
+// multipart 绑定支持 *multipart.FileHeader 文件字段。
 func (r *Request) BindBodyForm(object any) error {
-	return r.ctx.ShouldBindWith(object, binding.FormPost)
+	mediaType, err := r.requestMediaType()
+	if err != nil {
+		return err
+	}
+	return r.bindBodyForm(mediaType, object)
+}
+
+func (r *Request) bindBodyForm(mediaType string, object any) error {
+	switch mediaType {
+	case gin.MIMEPOSTForm:
+		if err := r.parseForm(); err != nil {
+			return err
+		}
+		return r.ctx.ShouldBindWith(object, binding.FormPost)
+	case gin.MIMEMultipartPOSTForm:
+		if err := r.parseForm(); err != nil {
+			return err
+		}
+		return r.ctx.ShouldBindWith(object, binding.FormMultipart)
+	default:
+		return unsupportedContentTypeError(r.GetHeader("Content-Type"))
+	}
 }
 
 // MustBindBodyForm 将请求body表单数据绑定到from结构体中
 // 任何错误将触发Panic流程中断
 func (r *Request) MustBindBodyForm(object any) {
-	err := r.BindBodyForm(object)
-	if err != nil {
-		panic(&internalPanic{
-			statusCode: http.StatusBadRequest,
-			rawError:   err,
-		})
-	}
+	panicRequestError(r.BindBodyForm(object), http.StatusBadRequest)
 }
 
 // GetRawBodyData 将请求body以字节数据返回
 func (r *Request) GetRawBodyData() ([]byte, error) {
-	return r.ctx.GetRawData()
+	if cachedBody, exists := r.ctx.Get(ginCtxKeyRequestBody); exists {
+		if body, ok := cachedBody.([]byte); ok {
+			return bytes.Clone(body), nil
+		}
+	}
+	if r.ctx.Request.Body == nil {
+		return []byte{}, nil
+	}
+	body, err := io.ReadAll(r.ctx.Request.Body)
+	if err != nil {
+		return nil, err
+	}
+	r.ctx.Set(ginCtxKeyRequestBody, bytes.Clone(body))
+	r.ctx.Request.Body = io.NopCloser(bytes.NewReader(body))
+	return bytes.Clone(body), nil
 }
 
-// MustBindBodyAuto 将请求body数据绑定到结构体中 自动识别
-func (r *Request) MustBindBodyAuto(object any) {
-	contentType := r.GetHeader("Content-Type")
-	switch {
-	case strings.HasPrefix(contentType, gin.MIMEJSON):
-		r.MustBindBodyJson(object)
-	case strings.HasPrefix(contentType, gin.MIMEPOSTForm),
-		strings.HasPrefix(contentType, gin.MIMEMultipartPOSTForm):
-		r.MustBindBodyForm(object)
-	default:
-		logger.Logrus().Warningln("unsupported Content-Type: " + contentType)
-		panic(&internalPanic{
-			statusCode: http.StatusBadRequest,
-			rawError:   errors.New("unsupported Content-Type: " + contentType),
-		})
+// BindBodyAuto 根据 Content-Type 自动选择 JSON、urlencoded 或 multipart 绑定器。
+func (r *Request) BindBodyAuto(object any) error {
+	mediaType, err := r.requestMediaType()
+	if err != nil {
+		return err
 	}
+	switch mediaType {
+	case gin.MIMEJSON:
+		return r.BindBodyJSON(object)
+	case gin.MIMEPOSTForm, gin.MIMEMultipartPOSTForm:
+		return r.bindBodyForm(mediaType, object)
+	default:
+		return unsupportedContentTypeError(r.GetHeader("Content-Type"))
+	}
+}
+
+// MustBindBodyAuto 根据 Content-Type 自动绑定请求正文，任何错误都会中断请求流程。
+func (r *Request) MustBindBodyAuto(object any) {
+	panicRequestError(r.BindBodyAuto(object), http.StatusBadRequest)
 }
 
 // MustGetRawBodyData 将请求body以字节数据返回
 // 任何错误将触发Panic流程中断
 func (r *Request) MustGetRawBodyData() []byte {
 	v, err := r.GetRawBodyData()
-	if err != nil {
-		panic(&internalPanic{
-			statusCode: http.StatusBadRequest,
-			rawError:   err,
-		})
-	}
+	panicRequestError(err, http.StatusBadRequest)
 	return v
 }
 
@@ -278,103 +282,180 @@ func (r *Request) MustGetRawBodyString() string {
 	return conversion.FromBytes(r.MustGetRawBodyData())
 }
 
-// GetFormValue 获取Form表单的值
-func (r *Request) GetFormValue(name string) (string, bool) {
-	return r.ctx.GetPostForm(name)
+// GetFormValue 获取 Form 表单值，并返回表单解析错误。
+func (r *Request) GetFormValue(name string) (string, bool, error) {
+	values, ok, err := r.GetFormArray(name)
+	if err != nil || !ok {
+		return "", false, err
+	}
+	if len(values) == 0 {
+		return "", false, nil
+	}
+	return values[0], true, nil
 }
 
 // MustGetFormValue 获取Form表单的值
 // 任何错误将触发Panic流程中断
 func (r *Request) MustGetFormValue(name string) string {
-	v, ok := r.GetFormValue(name)
+	v, ok, err := r.GetFormValue(name)
+	panicRequestError(err, http.StatusBadRequest)
 	if !ok {
-		panic(&internalPanic{
-			statusCode: http.StatusBadRequest,
-			rawError:   errors.New("param name = " + name + " not set"),
-		})
+		panicRequestError(paramNotSetError(name), http.StatusBadRequest)
 	}
 	return v
 }
 
-// GetFormArray 获取Form表单的值
-func (r *Request) GetFormArray(name string) ([]string, bool) {
-	return r.ctx.GetPostFormArray(name)
+// GetFormArray 获取 Form 表单的多个值，并返回表单解析错误。
+func (r *Request) GetFormArray(name string) ([]string, bool, error) {
+	if err := r.parseForm(); err != nil {
+		return nil, false, err
+	}
+	values, ok := r.ctx.Request.PostForm[name]
+	return values, ok, nil
 }
 
 // MustGetFormArray 获取Form表单的值
 // 任何错误将触发Panic流程中断
 func (r *Request) MustGetFormArray(name string) []string {
-	v, ok := r.GetFormArray(name)
+	v, ok, err := r.GetFormArray(name)
+	panicRequestError(err, http.StatusBadRequest)
 	if !ok {
-		panic(&internalPanic{
-			statusCode: http.StatusBadRequest,
-			rawError:   errors.New("param name = " + name + " not set"),
-		})
+		panicRequestError(paramNotSetError(name), http.StatusBadRequest)
 	}
 	return v
 }
 
-// GetFormMap 获取Form表单的值
-func (r *Request) GetFormMap(name string) (map[string]string, bool) {
-	return r.ctx.GetPostFormMap(name)
+// GetFormMap 获取使用 name[key] 形式提交的 Form 表单值，并返回表单解析错误。
+func (r *Request) GetFormMap(name string) (map[string]string, bool, error) {
+	if err := r.parseForm(); err != nil {
+		return nil, false, err
+	}
+	value, ok := r.ctx.GetPostFormMap(name)
+	return value, ok, nil
 }
 
 // MustGetFormMap 获取Form表单的值
 // 任何错误将触发Panic流程中断
 func (r *Request) MustGetFormMap(name string) map[string]string {
-	v, ok := r.GetFormMap(name)
+	v, ok, err := r.GetFormMap(name)
+	panicRequestError(err, http.StatusBadRequest)
 	if !ok {
-		panic(&internalPanic{
-			statusCode: http.StatusBadRequest,
-			rawError:   errors.New("param name = " + name + " not set"),
-		})
+		panicRequestError(paramNotSetError(name), http.StatusBadRequest)
 	}
 	return v
 }
 
 // GetFormFile 获取上传文件内容
 func (r *Request) GetFormFile(name string) (*multipart.FileHeader, error) {
+	if err := r.parseForm(); err != nil {
+		return nil, err
+	}
 	return r.ctx.FormFile(name)
 }
 
 // MustGetFormFile 获取上传文件内容
 // 任何错误将触发Panic流程中断
 func (r *Request) MustGetFormFile(name string) *multipart.FileHeader {
-	v, err := r.ctx.FormFile(name)
-	if err != nil {
-		panic(&internalPanic{
-			statusCode: http.StatusBadRequest,
-			rawError:   err,
-		})
-	}
+	v, err := r.GetFormFile(name)
+	panicRequestError(err, http.StatusBadRequest)
 	return v
 }
 
-// SaveUploadedFile 保存上传的文件内容 name: form name dirPath: 保存的路径 (文件夹) filename: 保存的文件名 若不指定则为源文件名
-func (r *Request) SaveUploadedFile(name string, dirPath string, filename ...string) error {
-	file, err := r.GetFormFile(name)
+// SaveUploadedFile 将 multipart 中 fieldName 对应的上传文件保存到 targetPath。
+// targetPath 是包含文件名的完整目标路径，由调用方负责生成和校验。
+// 父目录不存在时会自动创建；目标文件已存在时会被覆盖。
+// 文件解析错误直接返回，文件打开、目录创建或写入错误包装为 ErrSaveUploadedFile。
+func (r *Request) SaveUploadedFile(fieldName, targetPath string) error {
+	file, err := r.GetFormFile(fieldName)
 	if err != nil {
 		return err
 	}
-	var dist string
-	if len(filename) != 0 {
-		dist = dirPath + string(filepath.Separator) + filename[0]
-	} else {
-		dist = dirPath + string(filepath.Separator) + file.Filename
+	if err = r.ctx.SaveUploadedFile(file, targetPath); err != nil {
+		return fmt.Errorf("%w: %w", ErrSaveUploadedFile, err)
 	}
-	return r.ctx.SaveUploadedFile(file, dist)
+	return nil
 }
 
-// MustSaveUploadedFile 保存上传的文件内容 name: form name dirPath: 保存的路径 (文件夹) filename: 保存的文件名 若不指定则为源文件名
-// 任何错误将触发Panic流程中断
-func (r *Request) MustSaveUploadedFile(name string, dirPath string, filename ...string) {
-	err := r.SaveUploadedFile(name, dirPath, filename...)
-	if err != nil {
-		panic(&internalPanic{
-			statusCode: http.StatusBadRequest,
-			rawError:   err,
-		})
+// MustSaveUploadedFile 将 multipart 中 fieldName 对应的上传文件保存到 targetPath。
+// 保存行为与 SaveUploadedFile 相同。文件参数或 multipart 格式错误时以 400 中断请求，
+// 请求正文超限时以 413 中断请求，文件打开、目录创建或写入失败时以 500 中断请求。
+func (r *Request) MustSaveUploadedFile(fieldName, targetPath string) {
+	panicRequestError(r.SaveUploadedFile(fieldName, targetPath), http.StatusBadRequest)
+}
+
+func requestErrorStatus(err error, defaultStatus int) int {
+	var maxBytesError *http.MaxBytesError
+	if errors.As(err, &maxBytesError) {
+		return http.StatusRequestEntityTooLarge
 	}
+	if errors.Is(err, ErrUnsupportedContent) {
+		return http.StatusUnsupportedMediaType
+	}
+	if errors.Is(err, ErrSaveUploadedFile) {
+		return http.StatusInternalServerError
+	}
+	return defaultStatus
+}
+
+func panicRequestError(err error, defaultStatus int) {
+	if err == nil {
+		return
+	}
+	panic(&internalPanic{
+		statusCode: requestErrorStatus(err, defaultStatus),
+		rawError:   err,
+	})
+}
+
+func paramNotSetError(name string) error {
+	return fmt.Errorf("%w: %s", ErrParamNotSet, name)
+}
+
+func unsupportedContentTypeError(contentType string) error {
+	return fmt.Errorf("%w: %s", ErrUnsupportedContent, contentType)
+}
+
+// parseMediaType 使用标准库解析并规范化媒体类型，忽略 Content-Type 参数。
+func parseMediaType(contentType string) (string, error) {
+	mediaType, _, err := mime.ParseMediaType(contentType)
+	if err != nil {
+		return "", err
+	}
+	return strings.ToLower(mediaType), nil
+}
+
+func (r *Request) requestMediaType() (string, error) {
+	contentType := r.GetHeader("Content-Type")
+	mediaType, err := parseMediaType(contentType)
+	if err != nil {
+		return "", unsupportedContentTypeError(contentType)
+	}
+	return mediaType, nil
+}
+
+// parseForm 只解析一次表单并保留错误，避免 Gin 的 GetPostForm 系列方法吞掉解析异常。
+func (r *Request) parseForm() error {
+	state := getRequestState(r.ctx)
+	if state.formParsed {
+		return state.formErr
+	}
+	state.formParsed = true
+	contentType := r.GetHeader("Content-Type")
+	mediaType, mediaTypeErr := parseMediaType(contentType)
+	var err error
+	if mediaType == gin.MIMEMultipartPOSTForm {
+		maxMemory := int64(32 << 20)
+		if ginEngine != nil {
+			maxMemory = ginEngine.MaxMultipartMemory
+		}
+		err = r.ctx.Request.ParseMultipartForm(maxMemory)
+	} else if mediaTypeErr != nil && strings.HasPrefix(strings.ToLower(strings.TrimSpace(contentType)), "multipart/") {
+		err = mediaTypeErr
+	} else {
+		err = r.ctx.Request.ParseForm()
+	}
+	state.formErr = err
+	return err
 }
 
 // Panic 抛出异常，中断业务
@@ -399,12 +480,7 @@ func (r *Request) GetCookie(name string) (string, error) {
 // 任何错误将触发Panic流程中断
 func (r *Request) MustGetCookie(name string) string {
 	v, err := r.ctx.Cookie(name)
-	if err != nil {
-		panic(&internalPanic{
-			statusCode: http.StatusBadRequest,
-			rawError:   err,
-		})
-	}
+	panicRequestError(err, http.StatusBadRequest)
 	return v
 }
 
