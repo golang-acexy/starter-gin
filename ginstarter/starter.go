@@ -4,6 +4,8 @@ import (
 	"context"
 	"net"
 	"net/http"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/acexy/golang-toolkit/util/coll"
@@ -13,9 +15,15 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var server *http.Server
-var ginEngine *gin.Engine
-var ginConfig *GinConfig
+var ginRuntimeState atomic.Pointer[ginRuntime]
+var ginLifecycleLock sync.Mutex
+
+type ginRuntime struct {
+	server *http.Server
+	engine *gin.Engine
+	config *GinConfig
+	stopping atomic.Bool
+}
 
 type GinConfig struct {
 
@@ -90,20 +98,22 @@ type GinStarter struct {
 	// 懒加载函数，用于在实际执行时动态获取配置 该权重高于Config的直接配置
 	LazyConfig func() GinConfig
 	config     *GinConfig
+	configOnce sync.Once
 	// 自定义Gin模块的组件属性
 	GinSetting *parent.Setting
 }
 
 // 获取配置信息
 func (g *GinStarter) getConfig() *GinConfig {
-	if g.config == nil {
+	g.configOnce.Do(func() {
 		if g.LazyConfig != nil {
 			config := g.LazyConfig()
 			g.config = &config
 		} else {
-			g.config = &g.Config
+			config := g.Config
+			g.config = &config
 		}
-	}
+	})
 	return g.config
 }
 
@@ -127,12 +137,13 @@ func (g *GinStarter) Setting() *parent.Setting {
 
 func (g *GinStarter) Start() (any, error) {
 	var err error
-	if server != nil {
-		return ginEngine, ErrGinStarterAlreadyStarted
+	ginLifecycleLock.Lock()
+	if runtime := ginRuntimeState.Load(); runtime != nil {
+		ginLifecycleLock.Unlock()
+		return runtime.engine, ErrGinStarterAlreadyStarted
 	}
+	defer ginLifecycleLock.Unlock()
 	config := g.getConfig()
-	// 停止时会清空全局配置，因此每次启动都需要重新绑定当前配置。
-	ginConfig = config
 	if config.DebugModule {
 		gin.SetMode(gin.DebugMode)
 	} else {
@@ -142,7 +153,7 @@ func (g *GinStarter) Start() (any, error) {
 	gin.DefaultWriter = &logrusLogger{level: logrus.DebugLevel}
 	gin.DefaultErrorWriter = &logrusLogger{level: logrus.ErrorLevel}
 
-	ginEngine = gin.New()
+	ginEngine := gin.New()
 	registerValidators()
 	if config.PanicResolver == nil {
 		config.PanicResolver = panicResolver
@@ -197,7 +208,6 @@ func (g *GinStarter) Start() (any, error) {
 	})
 	if len(config.Routers) > 0 {
 		if err = registerRouter(ginEngine, config.Routers); err != nil {
-			clearGinState()
 			return nil, err
 		}
 	}
@@ -213,7 +223,6 @@ func (g *GinStarter) Start() (any, error) {
 		listener, err = net.Listen("tcp", config.ListenAddress)
 	}
 	if err != nil {
-		clearGinState()
 		return nil, err
 	}
 
@@ -221,41 +230,59 @@ func (g *GinStarter) Start() (any, error) {
 		Addr:    config.ListenAddress,
 		Handler: ginEngine,
 	}
-	server = currentServer
+	runtime := &ginRuntime{server: currentServer, engine: ginEngine, config: config}
+	ginRuntimeState.Store(runtime)
 
 	go func() {
 		if serveErr := currentServer.Serve(listener); serveErr != nil && serveErr != http.ErrServerClosed {
 			logrus.Errorln("gin server stopped unexpectedly:", serveErr)
+			ginRuntimeState.CompareAndSwap(runtime, nil)
 		}
 	}()
 	return ginEngine, nil
 }
 
 func (g *GinStarter) Stop(maxWaitTime time.Duration) (gracefully, stopped bool, err error) {
-	currentServer := server
-	if currentServer == nil {
+	ginLifecycleLock.Lock()
+	runtime := ginRuntimeState.Load()
+	if runtime == nil {
+		ginLifecycleLock.Unlock()
+		return false, true, ErrGinServerNotStarted
+	}
+	currentServer := runtime.server
+	ginLifecycleLock.Unlock()
+	if !runtime.stopping.CompareAndSwap(false, true) {
 		return false, true, ErrGinServerNotStarted
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), maxWaitTime)
 	defer cancel()
 	if err = currentServer.Shutdown(ctx); err != nil {
+		runtime.stopping.Store(false)
 		gracefully = false
 		stopped = false
 	} else {
 		gracefully = true
 		stopped = true
-		clearGinState()
+		ginLifecycleLock.Lock()
+		ginRuntimeState.CompareAndSwap(runtime, nil)
+		ginLifecycleLock.Unlock()
 	}
 	return
 }
 
 // RawGinEngine 获取原始的gin引擎实例
 func RawGinEngine() *gin.Engine {
-	return ginEngine
+	runtime := ginRuntimeState.Load()
+	if runtime == nil {
+		return nil
+	}
+	return runtime.engine
 }
 
-func clearGinState() {
-	server = nil
-	ginEngine = nil
-	ginConfig = nil
+func currentGinConfig() *GinConfig {
+	runtime := ginRuntimeState.Load()
+	if runtime == nil {
+		return nil
+	}
+	return runtime.config
 }

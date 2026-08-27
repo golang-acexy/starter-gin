@@ -32,8 +32,8 @@ func (r jsonResponseBodyEncoder) Encode(body any) ([]byte, error) {
 }
 
 func currentResponseBodyEncoder() ResponseBodyEncoder {
-	if ginConfig != nil && ginConfig.ResponseBodyEncoder != nil {
-		return ginConfig.ResponseBodyEncoder
+	if config := currentGinConfig(); config != nil && config.ResponseBodyEncoder != nil {
+		return config.ResponseBodyEncoder
 	}
 	return jsonResponseBodyEncoder{}
 }
@@ -51,8 +51,8 @@ func writeResponse(context *gin.Context, response Response) {
 	}
 
 	// 是否启用traceId响应
-	if ginConfig.TraceIDResponse != nil {
-		context.Header("Trace-Id", ginConfig.TraceIDResponse())
+	if config := currentGinConfig(); config != nil && config.TraceIDResponse != nil {
+		context.Header("Trace-Id", config.TraceIDResponse())
 	}
 
 	contentType := responseEntity.contentType

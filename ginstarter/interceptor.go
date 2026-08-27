@@ -99,15 +99,19 @@ func init() {
 }
 
 func isIgnoreHTTPStatusCode(httpCode int) bool {
-	if !ginConfig.DisableDefaultIgnoreHTTPCode {
+	config := currentGinConfig()
+	if config == nil {
+		return false
+	}
+	if !config.DisableDefaultIgnoreHTTPCode {
 		for _, v := range defaultIgnoreHTTPStatusCode {
 			if httpCode == v {
 				return true
 			}
 		}
 	}
-	if len(ginConfig.IgnoreHTTPCode) > 0 {
-		for _, v := range ginConfig.IgnoreHTTPCode {
+	if len(config.IgnoreHTTPCode) > 0 {
+		for _, v := range config.IgnoreHTTPCode {
 			if httpCode == v {
 				return true
 			}
@@ -203,16 +207,20 @@ func nativeResponseWritten(context *gin.Context) bool {
 
 // resolvePanic 将 panic 转换为框架 Response，不直接写入客户端。
 func resolvePanic(panicValue any) Response {
+	config := currentGinConfig()
 	status, err, safeToExpose := panicToError(panicValue)
 	if status == 0 {
 		status = http.StatusInternalServerError
 	}
 	errMsg := ""
-	if !ginConfig.HidePanicErrorDetails || safeToExpose {
-		errMsg = ginConfig.PanicResolver(err)
+	if config == nil {
+		return RespTextPlain([]byte(err.Error()), status)
 	}
-	if !ginConfig.DisableBadHTTPCodeResolver && !isIgnoreHTTPStatusCode(status) {
-		return ginConfig.BadHTTPCodeResolver(status, errMsg)
+	if !config.HidePanicErrorDetails || safeToExpose {
+		errMsg = config.PanicResolver(err)
+	}
+	if !config.DisableBadHTTPCodeResolver && !isIgnoreHTTPStatusCode(status) {
+		return config.BadHTTPCodeResolver(status, errMsg)
 	}
 	return RespTextPlain([]byte(errMsg), status)
 }
@@ -285,7 +293,8 @@ func runPostInterceptors(context *gin.Context, interceptors []PostInterceptor) {
 
 func normalizeResponse(context *gin.Context) Response {
 	response := currentResponse(context)
-	if response == nil || response.Data() == nil || ginConfig.DisableBadHTTPCodeResolver {
+	config := currentGinConfig()
+	if response == nil || response.Data() == nil || config == nil || config.DisableBadHTTPCodeResolver {
 		return response
 	}
 	statusCode := response.Data().statusCode
@@ -296,7 +305,7 @@ func normalizeResponse(context *gin.Context) Response {
 		return response
 	}
 	logger.Logrus().Warningln("Bad response path:", context.Request.URL, "status code:", statusCode)
-	response = ginConfig.BadHTTPCodeResolver(statusCode, "")
+	response = config.BadHTTPCodeResolver(statusCode, "")
 	setResponse(context, response)
 	return response
 }
@@ -304,10 +313,11 @@ func normalizeResponse(context *gin.Context) Response {
 // responsePipelineHandler 负责捕获遗漏异常、规范化状态并且只提交一次框架响应。
 func responsePipelineHandler() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
+		config := currentGinConfig()
 		tracker := &responseTracker{ResponseWriter: ctx.Writer}
 		ctx.Writer = tracker
-		if ginConfig.MaxRequestBodyBytes > 0 && ctx.Request.Body != nil {
-			ctx.Request.Body = http.MaxBytesReader(ctx.Writer, ctx.Request.Body, ginConfig.MaxRequestBodyBytes)
+		if config != nil && config.MaxRequestBodyBytes > 0 && ctx.Request.Body != nil {
+			ctx.Request.Body = http.MaxBytesReader(ctx.Writer, ctx.Request.Body, config.MaxRequestBodyBytes)
 		}
 		getRequestState(ctx)
 		defer func() {
