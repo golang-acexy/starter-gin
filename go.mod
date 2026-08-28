@@ -3,10 +3,10 @@ module github.com/golang-acexy/starter-gin
 go 1.26.7
 
 require (
-	github.com/acexy/golang-toolkit v1.26.0
+	github.com/acexy/golang-toolkit v1.26.1
 	github.com/gin-gonic/gin v1.12.0
 	github.com/go-playground/validator/v10 v10.30.3
-	github.com/golang-acexy/starter-parent v1.26.0
+	github.com/golang-acexy/starter-parent v1.26.1
 	github.com/libp2p/go-reuseport v0.4.0
 	github.com/sirupsen/logrus v1.10.2
 )
@@ -37,7 +37,7 @@ require (
 	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.3.2 // indirect
-	go.mongodb.org/mongo-driver/v2 v2.8.1 // indirect
+	go.mongodb.org/mongo-driver/v2 v2.8.2 // indirect
 	golang.org/x/arch v0.30.0 // indirect
 	golang.org/x/crypto v0.55.0 // indirect
 	golang.org/x/net v0.58.0 // indirect
