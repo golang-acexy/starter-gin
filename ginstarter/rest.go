@@ -46,7 +46,7 @@ func (r *RestRespStruct) IsSuccessWithData() bool {
 }
 
 // NewRestSuccess 响应标准成功Rest结构体
-func NewRestSuccess(data ...interface{}) *RestRespStruct {
+func NewRestSuccess(data ...any) *RestRespStruct {
 	result := RestRespStruct{
 		Status: &RestRespStatusStruct{
 			StatusCode:    StatusCodeSuccess,

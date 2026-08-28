@@ -445,8 +445,8 @@ func (r *Request) parseForm() error {
 	var err error
 	if mediaType == gin.MIMEMultipartPOSTForm {
 		maxMemory := int64(32 << 20)
-		if ginEngine != nil {
-			maxMemory = ginEngine.MaxMultipartMemory
+		if engine := RawGinEngine(); engine != nil {
+			maxMemory = engine.MaxMultipartMemory
 		}
 		err = r.ctx.Request.ParseMultipartForm(maxMemory)
 	} else if mediaTypeErr != nil && strings.HasPrefix(strings.ToLower(strings.TrimSpace(contentType)), "multipart/") {
@@ -485,11 +485,11 @@ func (r *Request) MustGetCookie(name string) string {
 }
 
 // SetValue 向gin上下文绑定数据
-func (r *Request) SetValue(key string, value interface{}) {
+func (r *Request) SetValue(key string, value any) {
 	r.ctx.Set(key, value)
 }
 
 // GetValue 从gin上下文获取数据
-func (r *Request) GetValue(key string) (interface{}, bool) {
+func (r *Request) GetValue(key string) (any, bool) {
 	return r.ctx.Get(key)
 }

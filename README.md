@@ -8,7 +8,7 @@ This module is the HTTP transport foundation. Applications may use it directly w
 
 ## Requirements
 
-Current module Go version: **1.25.8**.
+Current module Go version: **1.26.7**.
 
 ## Installation
 
@@ -310,6 +310,11 @@ Use **Request.Panic(statusCode, err)** to stop processing with an explicit HTTP 
 - Use **Request** and **Response** for framework-managed request processing.
 - Use **GinContext** only when direct Gin integration is required.
 - The starter owns one server and one Gin engine per process.
+- The server, engine, and resolved configuration are published as one atomic runtime snapshot and remain available until graceful shutdown completes.
 - **MaxMultipartMemory** is not an upload-size limit; use **MaxRequestBodyBytes** for a complete request limit.
 - **RawGinEngine** is only meaningful while the starter is running.
 - The standard Gin starter does not allow parent-managed restart after successful shutdown.
+
+## Testing
+
+Run deterministic unit tests with `go test ./...`. Long-running demo server tests use the `integration` build tag and must be started explicitly with `go test -tags=integration ./test/...`.
