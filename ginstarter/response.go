@@ -9,24 +9,24 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// Response 标准响应，用户可以通过实现该接口定义自己的响应类型。
-// 也可以使用 NewRespRest 创建响应。
+// Response supplies a request-owned entity for framework writing.
+// Data must return a stable value without panicking; final writing is outside downstream recovery.
 type Response interface {
-	// Data 返回完整响应实体，包含状态码、Content-Type、Header、Cookie 和 Body。
+	// Data returns the response entity; nil is written as an empty HTTP 200.
 	Data() *ResponseEntity
 }
 
-// ResponseBodyEncoder 将结构化响应正文编码为字节数据。
-// 默认使用 JSON 编码器，用户可以通过实现该接口提供自定义编码方式。
+// ResponseBodyEncoder encodes structured bodies; shared implementations must support concurrent requests.
 type ResponseBodyEncoder interface {
-	// Encode 编码响应正文。
+	// Encode returns encoded bytes or an error; response helpers panic on encoding errors.
 	Encode(body any) ([]byte, error)
 }
 
-// 默认 JSON 响应正文编码器。
+// jsonResponseBodyEncoder is the default structured-body encoder.
 type jsonResponseBodyEncoder struct {
 }
 
+// Encode serializes a structured body as JSON and returns serialization errors.
 func (r jsonResponseBodyEncoder) Encode(body any) ([]byte, error) {
 	return json.ToBytesError(body)
 }
@@ -38,7 +38,7 @@ func currentResponseBodyEncoder() ResponseBodyEncoder {
 	return jsonResponseBodyEncoder{}
 }
 
-// writeResponse 是框架托管响应的唯一写入点。
+// writeResponse is the single commit point for framework-managed responses.
 func writeResponse(context *gin.Context, response Response) {
 	if response == nil {
 		context.Status(http.StatusOK)
@@ -50,7 +50,7 @@ func writeResponse(context *gin.Context, response Response) {
 		return
 	}
 
-	// 是否启用traceId响应
+	// Attach the configured trace identifier before writing output.
 	if config := currentGinConfig(); config != nil && config.TraceIDResponse != nil {
 		context.Header("Trace-Id", config.TraceIDResponse())
 	}
@@ -86,24 +86,27 @@ func writeResponse(context *gin.Context, response Response) {
 	context.Data(httpStatusCode, contentType, responseEntity.body)
 }
 
-// ResponseEntity 完整响应实体，描述框架最终写入客户端的全部响应信息。
+// ResponseEntity holds mutable response data and is not safe for concurrent mutation.
+// Body inputs and cookies are borrowed; Body copies bytes while UnsafeRawBody exposes them.
 type ResponseEntity struct {
-	// body响应体负载数据
+	// body holds borrowed payload bytes.
 	body []byte
-	// ContentType 响应的ContentType
+	// contentType specifies the response media type.
 	contentType string
-	// 响应状态码
+	// statusCode defaults to HTTP 200 when zero.
 	statusCode int
-	// 响应头
+	// headers holds additional response headers.
 	headers http.Header
-	// 响应Cookie
+	// cookies holds borrowed response cookies.
 	cookies []*http.Cookie
 }
 
+// NewEmptyResponseEntity creates an empty entity; an unset status defaults to HTTP 200 when written.
 func NewEmptyResponseEntity() *ResponseEntity {
 	return &ResponseEntity{}
 }
 
+// NewResponseEntity borrows body bytes and sets the media type; status is unset.
 func NewResponseEntity(contentType string, body []byte) *ResponseEntity {
 	return &ResponseEntity{
 		contentType: contentType,
@@ -111,6 +114,7 @@ func NewResponseEntity(contentType string, body []byte) *ResponseEntity {
 	}
 }
 
+// NewResponseEntityWithStatusCode borrows body bytes and sets status/media type; resolver policy may replace it.
 func NewResponseEntityWithStatusCode(contentType string, body []byte, statusCode int) *ResponseEntity {
 	return &ResponseEntity{
 		contentType: contentType,
@@ -119,25 +123,30 @@ func NewResponseEntityWithStatusCode(contentType string, body []byte, statusCode
 	}
 }
 
+// NewCookie creates a cookie using net/http MaxAge semantics: zero omits expiry, negative requests deletion.
 func NewCookie(name, value string, maxAge int, path, domain string, secure, httpOnly bool) *http.Cookie {
 	return &http.Cookie{Name: name, Value: value, MaxAge: maxAge, Path: path, Domain: domain, Secure: secure, HttpOnly: httpOnly}
 }
 
+// SetBody borrows body bytes without copying or encoding.
 func (r *ResponseEntity) SetBody(body []byte) *ResponseEntity {
 	r.body = body
 	return r
 }
 
+// SetContentType sets the response media type; empty allows body-based detection.
 func (r *ResponseEntity) SetContentType(contentType string) *ResponseEntity {
 	r.contentType = contentType
 	return r
 }
 
+// SetStatusCode sets the transport status; zero defaults to 200 and resolver policy may replace other statuses.
 func (r *ResponseEntity) SetStatusCode(statusCode int) *ResponseEntity {
 	r.statusCode = statusCode
 	return r
 }
 
+// AddHeaders copies header values into this entity, appending to existing values.
 func (r *ResponseEntity) AddHeaders(headers http.Header) *ResponseEntity {
 	for name, values := range headers {
 		for _, value := range values {
@@ -147,7 +156,7 @@ func (r *ResponseEntity) AddHeaders(headers http.Header) *ResponseEntity {
 	return r
 }
 
-// SetHeader 设置响应头，同名响应头的旧值会被覆盖。
+// SetHeader replaces values for a header; an empty name is ignored.
 func (r *ResponseEntity) SetHeader(name, value string) *ResponseEntity {
 	if name == "" {
 		return r
@@ -159,7 +168,7 @@ func (r *ResponseEntity) SetHeader(name, value string) *ResponseEntity {
 	return r
 }
 
-// AddHeader 添加响应头，同名响应头可以保留多个值。
+// AddHeader appends a header value; an empty name is ignored.
 func (r *ResponseEntity) AddHeader(name, value string) *ResponseEntity {
 	if name == "" {
 		return r
@@ -171,6 +180,7 @@ func (r *ResponseEntity) AddHeader(name, value string) *ResponseEntity {
 	return r
 }
 
+// AddCookies borrows nonnil cookie pointers; callers must keep them stable until writing completes.
 func (r *ResponseEntity) AddCookies(cookies []*http.Cookie) *ResponseEntity {
 	for _, cookie := range cookies {
 		if cookie != nil {
@@ -180,6 +190,7 @@ func (r *ResponseEntity) AddCookies(cookies []*http.Cookie) *ResponseEntity {
 	return r
 }
 
+// AddCookie borrows a cookie pointer; nil is ignored.
 func (r *ResponseEntity) AddCookie(cookie *http.Cookie) *ResponseEntity {
 	if cookie != nil {
 		r.cookies = append(r.cookies, cookie)
@@ -187,6 +198,7 @@ func (r *ResponseEntity) AddCookie(cookie *http.Cookie) *ResponseEntity {
 	return r
 }
 
+// DebugString formats diagnostic data; a negative limit includes all body bytes. Avoid logging sensitive responses.
 func (r *ResponseEntity) DebugString(maxBodyBytes int) string {
 	body := r.body
 	truncated := false
@@ -197,36 +209,37 @@ func (r *ResponseEntity) DebugString(maxBodyBytes int) string {
 	return fmt.Sprintf("status-code: %d body: %s body-length: %d truncated: %t headers: %v content-type: %s", r.statusCode, string(body), len(r.body), truncated, r.headers, r.contentType)
 }
 
-// Body 返回响应正文副本，避免调用方绕过 SetBody 修改内部数据。
+// Body returns copied body bytes, leaving internal storage unchanged.
 func (r *ResponseEntity) Body() []byte {
 	return bytes.Clone(r.body)
 }
 
-// UnsafeRawBody 返回内部响应正文，仅用于确实需要原地修改的场景。
+// UnsafeRawBody borrows internal bytes for deliberate mutation; callers must provide synchronization.
 func (r *ResponseEntity) UnsafeRawBody() []byte {
 	return r.body
 }
 
-// responseImpl 是 REST 响应和普通响应共用的标准实现。
+// responseImpl is the shared implementation of common and REST responses.
 type responseImpl struct {
 	responseEntity *ResponseEntity
 }
 
+// Data returns the mutable entity owned by this response; no copy is made.
 func (r *responseImpl) Data() *ResponseEntity {
 	return r.responseEntity
 }
 
-// NewRespRest 创建一个Rest响应体
+// NewRespRest creates a mutable JSON-marked response; structured bodies use the configured encoder.
 func NewRespRest() *responseImpl {
 	return &responseImpl{responseEntity: &ResponseEntity{contentType: gin.MIMEJSON}}
 }
 
-// NewCommonResp 创建一个普通响应。
+// NewCommonResp creates a mutable response with no preset media type.
 func NewCommonResp() *responseImpl {
 	return &responseImpl{responseEntity: &ResponseEntity{}}
 }
 
-// DataBuilder 使用构造函数替换完整响应实体。
+// DataBuilder replaces the entity; a nil function or nil result panics with a package error.
 func (r *responseImpl) DataBuilder(fn func() *ResponseEntity) Response {
 	if fn == nil {
 		panic(ErrResponseEntityBuilderNil)
@@ -239,7 +252,7 @@ func (r *responseImpl) DataBuilder(fn func() *ResponseEntity) Response {
 	return r
 }
 
-// SetBody 编码结构化正文并返回响应实体。
+// SetBody encodes structured data and returns the entity; encoding errors panic.
 func (r *responseImpl) SetBody(body any) *ResponseEntity {
 	bodyBytes, err := currentResponseBodyEncoder().Encode(body)
 	if err != nil {
@@ -249,7 +262,7 @@ func (r *responseImpl) SetBody(body any) *ResponseEntity {
 	return r.responseEntity
 }
 
-// SetBodyResponse 编码结构化正文并返回标准响应。
+// SetBodyResponse encodes a structured body and returns the response; encoding errors panic.
 func (r *responseImpl) SetBodyResponse(body any) Response {
 	bodyBytes, err := currentResponseBodyEncoder().Encode(body)
 	if err != nil {
@@ -259,7 +272,7 @@ func (r *responseImpl) SetBodyResponse(body any) Response {
 	return r
 }
 
-// SetEntity 设置完整响应实体并返回该实体。
+// SetEntity borrows and replaces the entity, returning it; nil panics with ErrResponseEntityNil.
 func (r *responseImpl) SetEntity(entity *ResponseEntity) *ResponseEntity {
 	if entity == nil {
 		panic(ErrResponseEntityNil)
@@ -268,53 +281,53 @@ func (r *responseImpl) SetEntity(entity *ResponseEntity) *ResponseEntity {
 	return r.responseEntity
 }
 
-// SetEntityResponse 设置完整响应实体并返回标准响应。
+// SetEntityResponse borrows and replaces the entity, returning the response; nil panics.
 func (r *responseImpl) SetEntityResponse(entity *ResponseEntity) Response {
 	r.SetEntity(entity)
 	return r
 }
 
-// RespRestRaw 响应标准格式的Rest原始数据
+// RespRestRaw encodes the supplied REST envelope; a nil envelope encodes as null.
 func RespRestRaw(dataRest *RestRespStruct) Response {
 	return NewRespRest().SetBodyResponse(dataRest)
 }
 
-// RespRestSuccess 响应标准格式的Rest成功数据
+// RespRestSuccess encodes a successful REST envelope using only the first optional data value.
 func RespRestSuccess(data ...any) Response {
 	return NewRespRest().SetBodyResponse(NewRestSuccess(data...))
 }
 
-// RespRestException 响应标准格式的Rest系统异常错误
+// RespRestException encodes an exception envelope using only the first optional message.
 func RespRestException(statusMessage ...string) Response {
 	return NewRespRest().SetBodyResponse(NewRestException(statusMessage...))
 }
 
-// RespRestBadParameters 响应标准格式的Rest参数错误
+// RespRestBadParameters encodes a bad-parameters envelope using only the first optional message.
 func RespRestBadParameters(statusMessage ...string) Response {
 	return NewRespRest().SetBodyResponse(NewRestBadParameters(statusMessage...))
 }
 
-// RespRestUnauthorized 响应标准格式的 REST 未授权错误。
+// RespRestUnauthorized encodes an unauthorized envelope using only the first optional message.
 func RespRestUnauthorized(statusMessage ...string) Response {
 	return NewRespRest().SetBodyResponse(NewRestUnauthorized(statusMessage...))
 }
 
-// RespRestStatusError 响应标准格式的Rest状态错误
+// RespRestStatusError encodes a body status, independently of the HTTP transport status.
 func RespRestStatusError(statusCode StatusCode, statusMessage ...StatusMessage) Response {
 	return NewRespRest().SetBodyResponse(NewRestStatusError(statusCode, statusMessage...))
 }
 
-// RespRestBizError 响应标准格式的Rest业务错误
+// RespRestBizError encodes a business error under a successful framework status.
 func RespRestBizError(bizErrorCode BizErrorCode, bizErrorMessage BizErrorMessage) Response {
 	return NewRespRest().SetBodyResponse(NewRestBizError(bizErrorCode, bizErrorMessage))
 }
 
-// RespHTTPStatusCode 设置响应状态码。
+// RespHTTPStatusCode creates an empty response with the given status; automatic wrapping may replace it.
 func RespHTTPStatusCode(statusCode int) Response {
 	return NewCommonResp().SetEntityResponse(NewEmptyResponseEntity().SetStatusCode(statusCode))
 }
 
-// RespJSON 将结构化正文编码为 JSON 响应。
+// RespJSON encodes a structured body and marks it as JSON; the first optional status defaults to 200.
 func RespJSON(body any, httpStatusCode ...int) Response {
 	bodyBytes, err := currentResponseBodyEncoder().Encode(body)
 	if err != nil {
@@ -323,7 +336,7 @@ func RespJSON(body any, httpStatusCode ...int) Response {
 	return RespJSONRaw(bodyBytes, httpStatusCode...)
 }
 
-// RespJSONRaw 响应已经编码完成的 JSON 数据。
+// RespJSONRaw borrows encoded bytes without validation; only the first optional HTTP status is used.
 func RespJSONRaw(body []byte, httpStatusCode ...int) Response {
 	respData := NewEmptyResponseEntity()
 	respData.SetBody(body)
@@ -336,7 +349,7 @@ func RespJSONRaw(body []byte, httpStatusCode ...int) Response {
 	return NewCommonResp().SetEntityResponse(respData)
 }
 
-// RespTextPlain 响应Text数据
+// RespTextPlain borrows text bytes; only the first optional HTTP status is used, defaulting to 200.
 func RespTextPlain(data []byte, httpStatusCode ...int) Response {
 	respData := NewEmptyResponseEntity()
 	respData.SetBody(data)

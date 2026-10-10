@@ -4,32 +4,34 @@ import (
 	"time"
 )
 
-// RestRespStatusStruct 框架默认的Rest请求状态结构
+// RestRespStatusStruct describes a REST result independently of its transport HTTP status.
 type RestRespStatusStruct struct {
 
-	// 标识请求系统状态 200 标识网络请求层面的成功 见StatusCode
-	StatusCode    StatusCode    `json:"statusCode"`
+	// StatusCode is the envelope status; 200 permits business-error evaluation.
+	StatusCode StatusCode `json:"statusCode"`
+	// StatusMessage is the client-visible description of StatusCode.
 	StatusMessage StatusMessage `json:"statusMessage"`
 
-	// 业务错误码 仅当StatusCode为200时进入业务错误判断
-	BizErrorCode    *BizErrorCode    `json:"bizErrorCode"`
+	// BizErrorCode describes a business failure when StatusCode is 200; nil means none.
+	BizErrorCode *BizErrorCode `json:"bizErrorCode"`
+	// BizErrorMessage describes BizErrorCode; nil means no business message.
 	BizErrorMessage *BizErrorMessage `json:"bizErrorMessage"`
 
-	// 系统响应时间戳
+	// Timestamp is the envelope creation time in Unix milliseconds.
 	Timestamp int64 `json:"timestamp"`
 }
 
-// RestRespStruct 框架默认的Rest请求结构
+// RestRespStruct is a mutable REST envelope; synchronize access when sharing it between goroutines.
 type RestRespStruct struct {
 
-	// 请求状态描述
+	// Status describes the result; nil is treated as unsuccessful by success helpers.
 	Status *RestRespStatusStruct `json:"status"`
 
-	// 仅当StatusCode为200 无业务错误码BizErrorCode 响应成功数据
+	// Data carries success payloads by convention; constructors do not enforce payload ownership.
 	Data any `json:"data"`
 }
 
-// IsSuccess 判断RestRespStruct是否为成功状态 (200状态码，且不包含任何业务错误码)
+// IsSuccess reports status 200 with no business error code; a nil Status is unsuccessful.
 func (r *RestRespStruct) IsSuccess() bool {
 	if r.Status != nil {
 		return r.Status.StatusCode == StatusCodeSuccess && r.Status.BizErrorCode == nil
@@ -37,7 +39,7 @@ func (r *RestRespStruct) IsSuccess() bool {
 	return false
 }
 
-// IsSuccessWithData 判断RestRespStruct是否为成功状态 (200状态码，且不包含任何业务错误码，且包含响应数据)
+// IsSuccessWithData additionally requires a nonnil Data interface; a typed nil can satisfy this check.
 func (r *RestRespStruct) IsSuccessWithData() bool {
 	if r.Status != nil {
 		return r.Status.StatusCode == StatusCodeSuccess && r.Status.BizErrorCode == nil && r.Data != nil
@@ -45,7 +47,7 @@ func (r *RestRespStruct) IsSuccessWithData() bool {
 	return false
 }
 
-// NewRestSuccess 响应标准成功Rest结构体
+// NewRestSuccess creates a successful envelope using only the first optional data value.
 func NewRestSuccess(data ...any) *RestRespStruct {
 	result := RestRespStruct{
 		Status: &RestRespStatusStruct{
@@ -60,7 +62,7 @@ func NewRestSuccess(data ...any) *RestRespStruct {
 	return &result
 }
 
-// NewRestException 响应标准异常Rest结构体
+// NewRestException creates a system-error envelope using only the first optional message.
 func NewRestException(statusMessage ...string) *RestRespStruct {
 	status := &RestRespStatusStruct{
 		StatusCode:    StatusCodeException,
@@ -75,7 +77,7 @@ func NewRestException(statusMessage ...string) *RestRespStruct {
 	}
 }
 
-// NewRestBadParameters 响应标准参数错误Rest结构体
+// NewRestBadParameters creates a parameter-error envelope using only the first optional message.
 func NewRestBadParameters(statusMessage ...string) *RestRespStruct {
 	status := &RestRespStatusStruct{
 		StatusCode:    StatusCodeBadRequestParameters,
@@ -90,7 +92,7 @@ func NewRestBadParameters(statusMessage ...string) *RestRespStruct {
 	}
 }
 
-// NewRestUnauthorized 响应标准未授权Rest结构体
+// NewRestUnauthorized creates an unauthorized envelope using only the first optional message.
 func NewRestUnauthorized(statusMessage ...string) *RestRespStruct {
 	status := &RestRespStatusStruct{
 		StatusCode:    StatusCodeUnauthorized,
@@ -105,7 +107,7 @@ func NewRestUnauthorized(statusMessage ...string) *RestRespStruct {
 	}
 }
 
-// NewRestStatusError 响应标准错误Rest结构体
+// NewRestStatusError uses the first optional message when nonempty, otherwise the mapped default (possibly empty).
 func NewRestStatusError(statusCode StatusCode, statusMessage ...StatusMessage) *RestRespStruct {
 	dataRest := RestRespStruct{
 		Status: &RestRespStatusStruct{
@@ -121,7 +123,7 @@ func NewRestStatusError(statusCode StatusCode, statusMessage ...StatusMessage) *
 	return &dataRest
 }
 
-// NewRestBizError 响应标准业务错误Rest结构体
+// NewRestBizError creates a business-error envelope with system status 200 and no success data.
 func NewRestBizError(bizErrorCode BizErrorCode, bizErrorMessage BizErrorMessage) *RestRespStruct {
 	dataRest := RestRespStruct{
 		Status: &RestRespStatusStruct{

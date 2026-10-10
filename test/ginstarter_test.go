@@ -25,14 +25,14 @@ var starterLoader *parent.StarterLoader
 func init() {
 	logger.SetTraceIdSupplier(&traceID{})
 	logger.EnableConsoleWithFormatter(logger.TraceLevel, logger.NewFormatter(func(traceSupplier logger.TraceIdSupplier, entry *logrus.Entry) ([]byte, error) {
-		// 格式化时间戳，保留毫秒部分
+		// Format timestamps with millisecond precision.
 		timestamp := entry.Time.Format("2006-01-02 15:04:05.000")
-		// 格式化日志等级，大写右对齐
+		// Format levels in uppercase with right alignment.
 		level := strings.ToUpper(entry.Level.String())
 		if len(level) > 5 {
 			level = level[:5]
 		}
-		// 获取文件名与行号
+		// Include the source filename and line number.
 		file := "unknown:0"
 		if entry.HasCaller() {
 			file = fmt.Sprintf("%s:%d", filepath.Base(entry.Caller.File), entry.Caller.Line)
@@ -54,8 +54,8 @@ func (t *traceID) GetTraceId() string {
 	return "traceId"
 }
 
-// 默认Gin表现行为
-// 启用了非200状态码自动包裹响应
+// TestGinDefault runs the default server demo.
+// Non-ignored non-200 responses use the default REST conversion.
 func TestGinDefault(t *testing.T) {
 	starterLoader = parent.InitStarterLoader([]parent.Starter{
 		&ginstarter.GinStarter{
@@ -93,9 +93,9 @@ func TestGinDefault(t *testing.T) {
 	sys.ShutdownHolding()
 }
 
-// 自定义Gin的表现 将在和默认行为相同的路由功能代码下表现不同的响应
-// 禁用了http异常响应码自动包裹
-// 自定义panic异常响应
+// TestGinCustomer runs the same routes with custom response policies.
+// Disable non-200 response conversion.
+// Customize visible panic messages.
 func TestGinCustomer(t *testing.T) {
 	starter := &ginstarter.GinStarter{
 		Config: ginstarter.GinConfig{

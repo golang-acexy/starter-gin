@@ -15,58 +15,61 @@ import (
 	"github.com/gin-gonic/gin/binding"
 )
 
+// Request exposes request-scoped Gin operations; its zero value is not usable.
+// Do not retain it after the handler returns or share binding/body operations across goroutines.
 type Request struct {
 	ctx *gin.Context
 }
 
-// GinContext 获取原始 Gin 上下文。
+// GinContext exposes the borrowed native context; native writes own the final response.
+// In pre-interceptors, return a Response/error to stop the framework pre-list.
 func (r *Request) GinContext() *gin.Context {
 	return r.ctx
 }
 
-// Method 获取 HTTP 请求方法。
+// Method returns the HTTP method.
 func (r *Request) Method() string {
 	return r.ctx.Request.Method
 }
 
-// RoutePattern 获取当前请求匹配的注册路由模式，例如 /users/:id。
+// RoutePattern returns the matched route pattern, or an empty string for unmatched requests.
 func (r *Request) RoutePattern() string {
 	return r.ctx.FullPath()
 }
 
-// RequestPath 获取请求路径
+// RequestPath returns the URL path without query parameters.
 func (r *Request) RequestPath() string {
 	return r.ctx.Request.URL.Path
 }
 
-// RequestURI 获取请求 URI，包含路径和查询参数。
+// RequestURI returns the escaped path and query string.
 func (r *Request) RequestURI() string {
 	return r.ctx.Request.URL.RequestURI()
 }
 
-// Host 获取Host信息
+// Host returns the request Host value, which is supplied by the client.
 func (r *Request) Host() string {
 	return r.ctx.Request.Host
 }
 
-// Protocol 获取请求协议，例如 HTTP/1.1 或 HTTP/2.0。
+// Protocol returns the HTTP protocol string.
 func (r *Request) Protocol() string {
 	return r.ctx.Request.Proto
 }
 
-// ClientIP 尝试获取客户端 IP。
+// ClientIP delegates to Gin and its proxy trust configuration; forwarded values require trusted proxies.
 func (r *Request) ClientIP() string {
 	return r.ctx.ClientIP()
 }
 
-// --------------- path 路径参数
+// Path parameters.
 
-// GetPathParam 获取path路径参数 /:id
+// GetPathParam returns a path parameter, or an empty string when absent.
 func (r *Request) GetPathParam(name string) string {
 	return r.ctx.Param(name)
 }
 
-// GetPathParams 获取path路径参数 /:id 多个参数
+// GetPathParams returns requested path values; absent names have empty values.
 func (r *Request) GetPathParams(names ...string) map[string]string {
 	result := make(map[string]string, len(names))
 	if len(names) > 0 {
@@ -77,26 +80,24 @@ func (r *Request) GetPathParams(names ...string) map[string]string {
 	return result
 }
 
-// BindPathParams /:id 绑定结构体用于接收UriPath参数 结构体标签格式 `uri:""`
+// BindPathParams binds uri tags into a nonnil destination pointer and applies binding validation.
 func (r *Request) BindPathParams(object any) error {
 	return r.ctx.ShouldBindUri(object)
 }
 
-// MustBindPathParams /:id 绑定结构体用于接收UriPath参数 结构体标签格式 `uri:""`
-// 任何错误将触发Panic流程中断
+// MustBindPathParams binds uri tags or interrupts processing with a request error.
 func (r *Request) MustBindPathParams(object any) {
 	panicRequestError(r.BindPathParams(object), http.StatusBadRequest)
 }
 
-// --------------- query 参数
+// Query parameters.
 
-// GetQueryParam 获取 uri Query参数值 /?a=b&c=d
-// return string: 参数值(可能是类型零值) bool: 请求方是否传递
+// GetQueryParam returns the first query value and whether the parameter was supplied, including empty values.
 func (r *Request) GetQueryParam(name string) (string, bool) {
 	return r.ctx.GetQuery(name)
 }
 
-// MustGetQueryParam 获取 uri Query参数值 /?a=b&c=d 如果没有发送指定参数将触发异常中断流程
+// MustGetQueryParam returns the first supplied query value or interrupts with a missing-parameter error.
 func (r *Request) MustGetQueryParam(name string) string {
 	v, ok := r.GetQueryParam(name)
 	if !ok {
@@ -105,8 +106,7 @@ func (r *Request) MustGetQueryParam(name string) string {
 	return v
 }
 
-// GetQueryParams 获取 uri Query参数值 /?a=b&c=d 返回map类型数据
-// 如果目标没有传递将, map中将不包含指定的参数名
+// GetQueryParams returns the first values of supplied names; missing names are omitted.
 func (r *Request) GetQueryParams(names ...string) map[string]string {
 	result := make(map[string]string, len(names))
 	if len(names) > 0 {
@@ -120,8 +120,7 @@ func (r *Request) GetQueryParams(names ...string) map[string]string {
 	return result
 }
 
-// MustGetQueryParams 获取 uri Query参数值 /?a=b&c=d 返回map类型数据
-// 任何一个指定的参数没有传递将触发异常中断流程
+// MustGetQueryParams returns first values or interrupts if any requested name is missing.
 func (r *Request) MustGetQueryParams(names ...string) map[string]string {
 	result := make(map[string]string, len(names))
 	if len(names) > 0 {
@@ -137,13 +136,12 @@ func (r *Request) MustGetQueryParams(names ...string) map[string]string {
 	return result
 }
 
-// GetQueryParamArray 获取 uri Query参数值 /?a=b&a=d 返回切片数据
+// GetQueryParamArray returns all query values and presence; empty values are retained.
 func (r *Request) GetQueryParamArray(name string) ([]string, bool) {
 	return r.ctx.GetQueryArray(name)
 }
 
-// MustGetQueryParamArray 获取 uri Query参数值 /?a=b&a=d 返回切片数据
-// 如果参数未设置将触发异常中断流程
+// MustGetQueryParamArray returns query values or interrupts when absent.
 func (r *Request) MustGetQueryParamArray(name string) []string {
 	value, ok := r.GetQueryParamArray(name)
 	if !ok {
@@ -152,13 +150,12 @@ func (r *Request) MustGetQueryParamArray(name string) []string {
 	return value
 }
 
-// GetQueryParamMap 获取 uri Query参数值 /?name[a]=1&name[b]=2 返回map类型数据
+// GetQueryParamMap reads name[key] query values using Gin semantics.
 func (r *Request) GetQueryParamMap(name string) (map[string]string, bool) {
 	return r.ctx.GetQueryMap(name)
 }
 
-// MustGetQueryParamMap 获取 uri Query参数值 /?name[a]=1&name[b]=2 返回map类型数据
-// 如果参数未设置将触发异常中断流程
+// MustGetQueryParamMap reads name[key] query values or interrupts when absent.
 func (r *Request) MustGetQueryParamMap(name string) map[string]string {
 	v, ok := r.GetQueryParamMap(name)
 	if !ok {
@@ -167,20 +164,20 @@ func (r *Request) MustGetQueryParamMap(name string) map[string]string {
 	return v
 }
 
-// BindQueryParams 绑定结构体用于接收Query参数
+// BindQueryParams binds query values into a nonnil destination pointer; it does not read form bodies.
 func (r *Request) BindQueryParams(object any) error {
 	return r.ctx.ShouldBindQuery(object)
 }
 
-// MustBindQueryParams 绑定结构体用于接收Query参数以及POST表单符合条件的数据
-// 任何错误将触发Panic流程中断
+// MustBindQueryParams binds query values or interrupts on binding/validation failure.
 func (r *Request) MustBindQueryParams(object any) {
 	panicRequestError(r.BindQueryParams(object), http.StatusBadRequest)
 }
 
-// --------------- body 参数
+// Body parameters.
 
-// BindBodyJSON 将请求正文绑定到 JSON 结构体中。
+// BindBodyJSON decodes cached body bytes with Gin JSON binding and validation.
+// Repeated reads are supported; binding may partially mutate the caller-owned destination on error.
 func (r *Request) BindBodyJSON(object any) error {
 	body, err := r.GetRawBodyData()
 	if err != nil {
@@ -189,14 +186,12 @@ func (r *Request) BindBodyJSON(object any) error {
 	return binding.JSON.BindBody(body, object)
 }
 
-// MustBindBodyJSON 将请求正文绑定到 JSON 结构体中。
-// 任何错误将触发Panic流程中断
+// MustBindBodyJSON binds JSON or interrupts with a request error, including 413 for an oversized body.
 func (r *Request) MustBindBodyJSON(object any) {
 	panicRequestError(r.BindBodyJSON(object), http.StatusBadRequest)
 }
 
-// BindBodyForm 将 urlencoded 或 multipart 请求正文绑定到结构体中。
-// multipart 绑定支持 *multipart.FileHeader 文件字段。
+// BindBodyForm binds urlencoded or multipart data into a nonnil pointer; multipart file fields are supported.
 func (r *Request) BindBodyForm(object any) error {
 	mediaType, err := r.requestMediaType()
 	if err != nil {
@@ -222,13 +217,13 @@ func (r *Request) bindBodyForm(mediaType string, object any) error {
 	}
 }
 
-// MustBindBodyForm 将请求body表单数据绑定到from结构体中
-// 任何错误将触发Panic流程中断
+// MustBindBodyForm binds form data or interrupts on parsing, binding, validation, or size-limit failure.
 func (r *Request) MustBindBodyForm(object any) {
 	panicRequestError(r.BindBodyForm(object), http.StatusBadRequest)
 }
 
-// GetRawBodyData 将请求body以字节数据返回
+// GetRawBodyData returns a copy of cached body bytes and resets the reader after a successful first read.
+// Read errors are returned without caching partial data; an absent body returns empty bytes.
 func (r *Request) GetRawBodyData() ([]byte, error) {
 	if cachedBody, exists := r.ctx.Get(ginCtxKeyRequestBody); exists {
 		if body, ok := cachedBody.([]byte); ok {
@@ -247,7 +242,7 @@ func (r *Request) GetRawBodyData() ([]byte, error) {
 	return bytes.Clone(body), nil
 }
 
-// BindBodyAuto 根据 Content-Type 自动选择 JSON、urlencoded 或 multipart 绑定器。
+// BindBodyAuto selects JSON, urlencoded, or multipart from Content-Type; malformed/unsupported media types return an error.
 func (r *Request) BindBodyAuto(object any) error {
 	mediaType, err := r.requestMediaType()
 	if err != nil {
@@ -263,26 +258,24 @@ func (r *Request) BindBodyAuto(object any) error {
 	}
 }
 
-// MustBindBodyAuto 根据 Content-Type 自动绑定请求正文，任何错误都会中断请求流程。
+// MustBindBodyAuto binds by Content-Type or interrupts; unsupported content maps to 415 and body limits to 413.
 func (r *Request) MustBindBodyAuto(object any) {
 	panicRequestError(r.BindBodyAuto(object), http.StatusBadRequest)
 }
 
-// MustGetRawBodyData 将请求body以字节数据返回
-// 任何错误将触发Panic流程中断
+// MustGetRawBodyData returns copied body bytes or interrupts on a read error.
 func (r *Request) MustGetRawBodyData() []byte {
 	v, err := r.GetRawBodyData()
 	panicRequestError(err, http.StatusBadRequest)
 	return v
 }
 
-// MustGetRawBodyString 将请求body以字符串返回
-// 任何错误将触发Panic流程中断
+// MustGetRawBodyString returns cached body content as a string or interrupts on a read error.
 func (r *Request) MustGetRawBodyString() string {
 	return conversion.FromBytes(r.MustGetRawBodyData())
 }
 
-// GetFormValue 获取 Form 表单值，并返回表单解析错误。
+// GetFormValue returns the first body form value, presence, and any cached form parsing error.
 func (r *Request) GetFormValue(name string) (string, bool, error) {
 	values, ok, err := r.GetFormArray(name)
 	if err != nil || !ok {
@@ -294,8 +287,7 @@ func (r *Request) GetFormValue(name string) (string, bool, error) {
 	return values[0], true, nil
 }
 
-// MustGetFormValue 获取Form表单的值
-// 任何错误将触发Panic流程中断
+// MustGetFormValue returns a body form value or interrupts on parsing failure or absence.
 func (r *Request) MustGetFormValue(name string) string {
 	v, ok, err := r.GetFormValue(name)
 	panicRequestError(err, http.StatusBadRequest)
@@ -305,7 +297,7 @@ func (r *Request) MustGetFormValue(name string) string {
 	return v
 }
 
-// GetFormArray 获取 Form 表单的多个值，并返回表单解析错误。
+// GetFormArray returns body form values without copying; do not mutate them during further request processing.
 func (r *Request) GetFormArray(name string) ([]string, bool, error) {
 	if err := r.parseForm(); err != nil {
 		return nil, false, err
@@ -314,8 +306,7 @@ func (r *Request) GetFormArray(name string) ([]string, bool, error) {
 	return values, ok, nil
 }
 
-// MustGetFormArray 获取Form表单的值
-// 任何错误将触发Panic流程中断
+// MustGetFormArray returns body form values or interrupts on parsing failure or absence.
 func (r *Request) MustGetFormArray(name string) []string {
 	v, ok, err := r.GetFormArray(name)
 	panicRequestError(err, http.StatusBadRequest)
@@ -325,7 +316,7 @@ func (r *Request) MustGetFormArray(name string) []string {
 	return v
 }
 
-// GetFormMap 获取使用 name[key] 形式提交的 Form 表单值，并返回表单解析错误。
+// GetFormMap reads name[key] body form values and preserves form parsing errors.
 func (r *Request) GetFormMap(name string) (map[string]string, bool, error) {
 	if err := r.parseForm(); err != nil {
 		return nil, false, err
@@ -334,8 +325,7 @@ func (r *Request) GetFormMap(name string) (map[string]string, bool, error) {
 	return value, ok, nil
 }
 
-// MustGetFormMap 获取Form表单的值
-// 任何错误将触发Panic流程中断
+// MustGetFormMap reads name[key] body form values or interrupts on parsing failure or absence.
 func (r *Request) MustGetFormMap(name string) map[string]string {
 	v, ok, err := r.GetFormMap(name)
 	panicRequestError(err, http.StatusBadRequest)
@@ -345,7 +335,7 @@ func (r *Request) MustGetFormMap(name string) map[string]string {
 	return v
 }
 
-// GetFormFile 获取上传文件内容
+// GetFormFile returns an upload header after parsing; callers must close files they open from it.
 func (r *Request) GetFormFile(name string) (*multipart.FileHeader, error) {
 	if err := r.parseForm(); err != nil {
 		return nil, err
@@ -353,18 +343,15 @@ func (r *Request) GetFormFile(name string) (*multipart.FileHeader, error) {
 	return r.ctx.FormFile(name)
 }
 
-// MustGetFormFile 获取上传文件内容
-// 任何错误将触发Panic流程中断
+// MustGetFormFile returns an upload header or interrupts on parsing failure or absence.
 func (r *Request) MustGetFormFile(name string) *multipart.FileHeader {
 	v, err := r.GetFormFile(name)
 	panicRequestError(err, http.StatusBadRequest)
 	return v
 }
 
-// SaveUploadedFile 将 multipart 中 fieldName 对应的上传文件保存到 targetPath。
-// targetPath 是包含文件名的完整目标路径，由调用方负责生成和校验。
-// 父目录不存在时会自动创建；目标文件已存在时会被覆盖。
-// 文件解析错误直接返回，文件打开、目录创建或写入错误包装为 ErrSaveUploadedFile。
+// SaveUploadedFile copies the named upload to a caller-selected full path, creating parent directories.
+// Existing files are overwritten; callers own path validation. Storage errors wrap ErrSaveUploadedFile.
 func (r *Request) SaveUploadedFile(fieldName, targetPath string) error {
 	file, err := r.GetFormFile(fieldName)
 	if err != nil {
@@ -376,9 +363,8 @@ func (r *Request) SaveUploadedFile(fieldName, targetPath string) error {
 	return nil
 }
 
-// MustSaveUploadedFile 将 multipart 中 fieldName 对应的上传文件保存到 targetPath。
-// 保存行为与 SaveUploadedFile 相同。文件参数或 multipart 格式错误时以 400 中断请求，
-// 请求正文超限时以 413 中断请求，文件打开、目录创建或写入失败时以 500 中断请求。
+// MustSaveUploadedFile saves an upload or interrupts with 400 for invalid input, 413 for body limits,
+// or 500 for storage failures. It has the same overwrite behavior as SaveUploadedFile.
 func (r *Request) MustSaveUploadedFile(fieldName, targetPath string) {
 	panicRequestError(r.SaveUploadedFile(fieldName, targetPath), http.StatusBadRequest)
 }
@@ -415,7 +401,7 @@ func unsupportedContentTypeError(contentType string) error {
 	return fmt.Errorf("%w: %s", ErrUnsupportedContent, contentType)
 }
 
-// parseMediaType 使用标准库解析并规范化媒体类型，忽略 Content-Type 参数。
+// parseMediaType normalizes a media type and ignores Content-Type parameters.
 func parseMediaType(contentType string) (string, error) {
 	mediaType, _, err := mime.ParseMediaType(contentType)
 	if err != nil {
@@ -433,7 +419,7 @@ func (r *Request) requestMediaType() (string, error) {
 	return mediaType, nil
 }
 
-// parseForm 只解析一次表单并保留错误，避免 Gin 的 GetPostForm 系列方法吞掉解析异常。
+// parseForm caches parsing results and errors instead of suppressing malformed-form failures.
 func (r *Request) parseForm() error {
 	state := getRequestState(r.ctx)
 	if state.formParsed {
@@ -458,7 +444,7 @@ func (r *Request) parseForm() error {
 	return err
 }
 
-// Panic 抛出异常，中断业务
+// Panic interrupts processing with an explicit HTTP status and a nonnil error; resolver policy controls final output.
 func (r *Request) Panic(statusCode int, err error) {
 	panic(&internalPanic{
 		statusCode: statusCode,
@@ -466,30 +452,29 @@ func (r *Request) Panic(statusCode int, err error) {
 	})
 }
 
-// GetHeader 获取Head name对应的参数值
+// GetHeader returns the first request header value or an empty string.
 func (r *Request) GetHeader(name string) string {
 	return r.ctx.GetHeader(name)
 }
 
-// GetCookie 获取Cookie name对应的参数值
+// GetCookie returns a decoded cookie value or an error when absent or invalid.
 func (r *Request) GetCookie(name string) (string, error) {
 	return r.ctx.Cookie(name)
 }
 
-// MustGetCookie 获取Cookie name对应的参数值
-// 任何错误将触发Panic流程中断
+// MustGetCookie returns a cookie or interrupts on lookup failure.
 func (r *Request) MustGetCookie(name string) string {
 	v, err := r.ctx.Cookie(name)
 	panicRequestError(err, http.StatusBadRequest)
 	return v
 }
 
-// SetValue 向gin上下文绑定数据
+// SetValue stores request-local data; synchronization of mutable stored values remains caller-owned.
 func (r *Request) SetValue(key string, value any) {
 	r.ctx.Set(key, value)
 }
 
-// GetValue 从gin上下文获取数据
+// GetValue returns request-local data and presence; the returned value is not copied.
 func (r *Request) GetValue(key string) (any, bool) {
 	return r.ctx.Get(key)
 }

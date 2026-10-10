@@ -11,6 +11,7 @@ type logrusLogger struct {
 	level logrus.Level
 }
 
+// Write logs bytes without trailing line endings and reports the full input length.
 func (l *logrusLogger) Write(p []byte) (n int, err error) {
 	str := string(p)
 	str = strings.TrimRight(str, "\r\n")

@@ -11,13 +11,13 @@ import (
 
 const interceptorTestPathPrefix = "/interceptor-test/"
 
-// InterceptorTestRouter 验证全局拦截器、路由拦截器、Handler 和异常响应之间的执行链路。
+// InterceptorTestRouter demonstrates interceptor order and error-response handling.
 //
-// 正常链路预期顺序：
+// Expected order for successful requests:
 // GLOBAL_PRE_A -> GLOBAL_PRE_B -> ROUTER_PRE_A -> ROUTER_PRE_B -> HANDLER ->
 // ROUTER_POST_A -> ROUTER_POST_B -> GLOBAL_POST_A -> GLOBAL_POST_B
 //
-// 测试命令：
+// Manual test commands:
 //
 // curl -i 'http://127.0.0.1:8080/interceptor-test/run?case=normal'
 // curl -i 'http://127.0.0.1:8080/interceptor-test/run?case=global-pre-response'
@@ -38,6 +38,7 @@ const interceptorTestPathPrefix = "/interceptor-test/"
 // curl -i 'http://127.0.0.1:8080/interceptor-test/run?case=native-response'
 type InterceptorTestRouter struct{}
 
+// Info returns the example route-group configuration.
 func (i *InterceptorTestRouter) Info() *ginstarter.RouterInfo {
 	return &ginstarter.RouterInfo{
 		GroupPath: "interceptor-test",
@@ -52,12 +53,13 @@ func (i *InterceptorTestRouter) Info() *ginstarter.RouterInfo {
 	}
 }
 
+// Handlers registers example handlers during startup.
 func (i *InterceptorTestRouter) Handlers(router *ginstarter.RouterWrapper) {
 	router.GET("run", i.run())
 }
 
-// InterceptorTestGlobalPreInterceptors 返回拦截器测试使用的全局前置拦截器。
-// 拦截器只处理 /interceptor-test/ 下的请求，不影响其他测试路由。
+// InterceptorTestGlobalPreInterceptors returns global pre-interceptors for the demo.
+// Only requests under /interceptor-test/ are handled.
 func InterceptorTestGlobalPreInterceptors() []ginstarter.PreInterceptor {
 	return []ginstarter.PreInterceptor{
 		interceptorTestGlobalPreA,
@@ -65,8 +67,8 @@ func InterceptorTestGlobalPreInterceptors() []ginstarter.PreInterceptor {
 	}
 }
 
-// InterceptorTestGlobalPostInterceptors 返回拦截器测试使用的全局后置拦截器。
-// 拦截器只处理 /interceptor-test/ 下的请求，不影响其他测试路由。
+// InterceptorTestGlobalPostInterceptors returns global post-interceptors for the demo.
+// Only requests under /interceptor-test/ are handled.
 func InterceptorTestGlobalPostInterceptors() []ginstarter.PostInterceptor {
 	return []ginstarter.PostInterceptor{
 		interceptorTestGlobalPostA,

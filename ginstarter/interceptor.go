@@ -65,26 +65,35 @@ var (
 	}
 )
 
+// BasicAuthAccount configures one Basic authentication account; keep credentials private.
 type BasicAuthAccount struct {
+	// Username is the expected Basic authentication username.
 	Username string
+	// Password is the expected Basic authentication password.
 	Password string
 }
 
-// 定义内部panic 用于特殊处理 中断请求流程
+// internalPanic interrupts request processing with an explicit status.
 type internalPanic struct {
 	statusCode int
 	rawError   error
 }
 
-// PreInterceptor 前置拦截器。
-// 返回非空 Response 或 error 时终止后续前置拦截器及 Handler，并进入后置拦截器链。
+// PreInterceptor runs before business handlers. A nonnil Response or nonnil error stops
+// remaining pre-interceptors and handlers, while applicable post-interceptors still run.
+// Returning nil, nil continues processing; native response writes alone do not short-circuit.
+// Use the return values for framework short-circuiting; Gin Abort does not stop this pre-list.
 type PreInterceptor func(request *Request) (Response, error)
 
-// PostInterceptor 后置拦截器。
-// 返回非空 Response 时替换当前响应；返回 error 时转换为异常响应并停止当前后置拦截器链。
+// PostInterceptor runs after processing within its scope. A nonnil response replaces the current
+// response; nil retains it. An error stops this post-list and becomes an exception response.
 type PostInterceptor func(request *Request, response Response) (Response, error)
 
+// PanicResolver converts an error to visible text. It must support concurrent calls and must not panic.
 type PanicResolver func(err error) string
+
+// BadHTTPCodeResolver replaces a non-ignored, non-200 response, including its entity metadata.
+// It must support concurrent calls and return a usable response without panicking.
 type BadHTTPCodeResolver func(httpStatusCode int, errMsg string) Response
 
 func init() {
@@ -127,7 +136,7 @@ func panicToError(panicError any) (statusCode int, err error, internalError bool
 	case error:
 		err = t
 	default:
-		// 内部特殊错误
+		// Preserve framework-assigned status and validation details.
 		if v, ok := t.(*internalPanic); ok {
 			rawError := v.rawError
 			statusCode = v.statusCode
@@ -145,7 +154,7 @@ func panicToError(panicError any) (statusCode int, err error, internalError bool
 			err = fmt.Errorf("%v", t)
 		}
 	}
-	// 明确的 4xx 表示请求本身不符合约束，属于可预期的客户端错误，不输出异常调用栈。
+	// Explicit 4xx failures are expected client errors and do not need a stack trace.
 	if statusCode >= http.StatusBadRequest && statusCode < http.StatusInternalServerError {
 		logger.Logrus().Warnf("request rejected: %v", err)
 	} else if !internalError {
@@ -176,23 +185,26 @@ func panicToError(panicError any) (statusCode int, err error, internalError bool
 	return
 }
 
-// responseTracker 记录业务代码是否直接操作了 Gin 原生响应。
-// 仅设置 Header 不视为提交响应，框架最终响应仍会保留这些 Header。
+// responseTracker detects committed native Gin responses.
+// Setting headers alone does not commit a response; framework output retains them.
 type responseTracker struct {
 	gin.ResponseWriter
 	nativeWritten bool
 }
 
+// WriteHeader records native status handling before forwarding to Gin.
 func (r *responseTracker) WriteHeader(code int) {
 	r.nativeWritten = true
 	r.ResponseWriter.WriteHeader(code)
 }
 
+// Write records native body handling before forwarding the bytes.
 func (r *responseTracker) Write(data []byte) (int, error) {
 	r.nativeWritten = true
 	return r.ResponseWriter.Write(data)
 }
 
+// WriteString records native body handling before forwarding the string.
 func (r *responseTracker) WriteString(data string) (int, error) {
 	r.nativeWritten = true
 	return r.ResponseWriter.WriteString(data)
@@ -205,7 +217,7 @@ func nativeResponseWritten(context *gin.Context) bool {
 	return context.Writer.Written()
 }
 
-// resolvePanic 将 panic 转换为框架 Response，不直接写入客户端。
+// resolvePanic converts a panic to a framework Response without writing it.
 func resolvePanic(panicValue any) Response {
 	config := currentGinConfig()
 	status, err, safeToExpose := panicToError(panicValue)
@@ -310,7 +322,7 @@ func normalizeResponse(context *gin.Context) Response {
 	return response
 }
 
-// responsePipelineHandler 负责捕获遗漏异常、规范化状态并且只提交一次框架响应。
+// responsePipelineHandler recovers downstream panics and commits normalized output once.
 func responsePipelineHandler() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		config := currentGinConfig()
@@ -324,7 +336,7 @@ func responsePipelineHandler() gin.HandlerFunc {
 			if panicValue := recover(); panicValue != nil {
 				setResponse(ctx, resolvePanic(panicValue))
 			}
-			// 原生 Gin 响应一旦写入，框架不再尝试覆盖。
+			// Do not overwrite an already committed native Gin response.
 			if nativeResponseWritten(ctx) || tracker.ResponseWriter.Written() {
 				return
 			}
@@ -334,10 +346,11 @@ func responsePipelineHandler() gin.HandlerFunc {
 	}
 }
 
-// 常用的一些中间件
+// Built-in request interceptors.
 
-// BasicAuthInterceptor 基础权限校验中间件
-// match 满足指定条件才执行
+// BasicAuthInterceptor checks one account unless the first optional match returns false.
+// The account and supplied match must be nonnil; extra match functions are ignored.
+// Do not mutate the account concurrently with requests.
 func BasicAuthInterceptor(account *BasicAuthAccount, match ...func(request *Request) bool) PreInterceptor {
 	return func(request *Request) (Response, error) {
 		if len(match) > 0 {
@@ -356,7 +369,10 @@ func BasicAuthInterceptor(account *BasicAuthAccount, match ...func(request *Requ
 	}
 }
 
-// MediaTypeInterceptor ContentType校验中间件
+// MediaTypeInterceptor accepts the listed media types after parsing Content-Type parameters.
+// Missing or malformed types are rejected when restrictions are present; an empty list permits all.
+// Only the first optional match is used and must be nonnil; false skips validation.
+// Do not mutate the allowed-type slice concurrently with requests.
 func MediaTypeInterceptor(contentType []string, match ...func(request *Request) bool) PreInterceptor {
 	return func(request *Request) (Response, error) {
 		if len(match) > 0 {
