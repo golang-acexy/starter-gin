@@ -9,15 +9,15 @@ import (
 
 const paramTestPathPrefix = "/param-test/"
 
-// ParamRouter 验证 path、query、header、cookie、JSON、Form、multipart 和原始正文解析。
-// 每个 Handler 都会输出带有 [param-test] 前缀的场景日志，便于同时核对响应与服务端解析结果。
+// ParamRouter demonstrates path, query, metadata, JSON, form, multipart, and raw-body parsing.
+// Handlers log scenarios with the [param-test] prefix for manual response checks.
 //
-// 启动方式（分别启动，不要同时占用 8080 端口）：
+// Start one demo at a time; both use port 8080:
 //
-// go test ./test -run '^TestGinDefault$' -count=1 -v
-// go test ./test -run '^TestGinCustomer$' -count=1 -v
+// go test -tags=integration ./test -run '^TestGinDefault$' -count=1 -v
+// go test -tags=integration ./test -run '^TestGinCustomer$' -count=1 -v
 //
-// 正常场景：
+// Successful scenarios:
 //
 // curl -i 'http://127.0.0.1:8080/param-test/path/12/acexy'
 // curl --globoff -i 'http://127.0.0.1:8080/param-test/query?id=12&name=acexy&tag=go&tag=gin&filter[role]=admin'
@@ -30,7 +30,7 @@ const paramTestPathPrefix = "/param-test/"
 // curl -i 'http://127.0.0.1:8080/param-test/body/multipart' -F 'id=12' -F 'name=acexy' -F 'file=@ginstarter/error.go;type=text/plain'
 // curl -i 'http://127.0.0.1:8080/param-test/body/raw-repeat' -H 'Content-Type: application/json' --data '{"id":12,"name":"acexy"}'
 //
-// 异常场景：
+// Failure scenarios:
 //
 // curl -i 'http://127.0.0.1:8080/param-test/path/not-number/acexy'
 // curl -i 'http://127.0.0.1:8080/param-test/query?name=acexy'
@@ -44,12 +44,14 @@ const paramTestPathPrefix = "/param-test/"
 // curl -i 'http://127.0.0.1:8080/param-test/body/form-values' -H 'Content-Type: application/x-www-form-urlencoded' --data-binary @README.md
 type ParamRouter struct{}
 
+// Info returns the example route-group configuration.
 func (d *ParamRouter) Info() *ginstarter.RouterInfo {
 	return &ginstarter.RouterInfo{
 		GroupPath: "param-test",
 	}
 }
 
+// Handlers registers example handlers during startup.
 func (d *ParamRouter) Handlers(router *ginstarter.RouterWrapper) {
 	router.GET("path/:id/:name", d.path())
 	router.GET("query", d.query())

@@ -2,8 +2,8 @@ package ginstarter
 
 import "github.com/gin-gonic/gin"
 
-// requestState 保存一次请求在框架内部流转的响应。
-// Handler、拦截器和异常处理器只更新该状态，最终由响应管道统一写入客户端。
+// requestState stores the response flowing through one request.
+// Handlers, interceptors, and recovery update state; the outer pipeline writes the result.
 type requestState struct {
 	response   Response
 	stopped    bool

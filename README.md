@@ -174,7 +174,7 @@ type input struct {
 }
 ~~~
 
-The starter registers the custom **domain** validation tag during startup. Validation failures are converted into concise request messages by the recovery pipeline.
+The starter registers the custom **domain** validation tag during startup. It accepts `localhost` or ASCII multi-label domains with labels of 1–63 bytes and a total length up to 253 bytes. Labels allow letters, digits, and internal hyphens; the final label must contain at least two letters only. Underscores, leading/trailing hyphens, trailing dots, and Unicode input are rejected. No DNS lookup is performed. Previously accepted malformed names now fail validation. Validation failures are converted into concise request messages by the recovery pipeline.
 
 ## Responses
 
@@ -212,7 +212,7 @@ entity := ginstarter.NewResponseEntityWithStatusCode(
     AddCookie(ginstarter.NewCookie("session", "value", 3600, "/", "", true, true))
 
 return ginstarter.NewCommonResp().SetEntityResponse(entity), nil
-~~~g s
+~~~
 
 **Body** returns a copy. **UnsafeRawBody** exposes the internal byte slice only for post-interceptors that intentionally need in-place mutation. **DebugString** provides bounded diagnostic output.
 
@@ -241,7 +241,7 @@ Global pre interceptors
 Rules:
 
 - Interceptors execute in slice registration order.
-- A pre-interceptor returning a response or error stops later pre-interceptors and the handler.
+- A pre-interceptor returning a non-nil response or error stops later pre-interceptors and the handler. Returning nil, nil continues; native writes or Gin Abort alone do not stop the framework pre-list.
 - Post-interceptors still receive the current response after handler errors or pre-interceptor short-circuiting within their scope.
 - A post-interceptor returning a non-nil response replaces the current response.
 - A post-interceptor returning an error stops the remaining post-interceptors in that interceptor chain.
@@ -256,16 +256,18 @@ Built-in interceptors:
 
 ## Error Handling
 
-By default, non-ignored error HTTP statuses are converted through **BadHTTPCodeResolver** into the standard REST envelope. The default resolver returns transport HTTP 200 and places the original status in **status.statusCode**.
+By default, every non-ignored, non-200 HTTP response is converted through **BadHTTPCodeResolver** into a REST envelope with transport HTTP 200. This includes HTTP 201. The default resolver preserves body statuses 400, 401, 403, 404, 405, 413, and 415; other converted statuses use body status 500. To return HTTP 201 or another original response, set **DisableBadHTTPCodeResolver: true** or add its status to **IgnoreHTTPCode**. Built-in ignored statuses are 204, 300, 301, 302, 304, 305, 307, and 308.
 
 | Configuration | Behavior |
 | --- | --- |
-| **DisableBadHTTPCodeResolver: false** | Convert non-ignored error statuses to the REST envelope |
+| **DisableBadHTTPCodeResolver: false** | Convert non-ignored, non-200 responses to the REST envelope |
 | **DisableBadHTTPCodeResolver: true** | Preserve the original HTTP status and response |
 | **HidePanicErrorDetails: true** | Hide unknown panic details while preserving explicitly assigned HTTP status codes |
 | **IgnoreHTTPCode** | Preserve selected HTTP statuses without resolver conversion |
 
 Expected 4xx request errors are logged at WARN without a stack trace. Unknown failures and 5xx panics are logged at ERROR with diagnostic stack information.
+
+Custom callbacks and encoders must support concurrent requests. **Response.Data**, final response resolvers, and **TraceIDResponse** must not panic. Resolver conversion replaces the complete response entity, including entity headers and cookies; preserve required metadata explicitly.
 
 Use **Request.Panic(statusCode, err)** to stop processing with an explicit HTTP status. Use **PanicResolver** to customize visible error text and **BadHTTPCodeResolver** to customize the final error response.
 
@@ -278,14 +280,14 @@ Use **Request.Panic(statusCode, err)** to stop processing with an explicit HTTP 
 | **InitFunc** | Receives the raw **gin.Engine** after starter initialization |
 | **UseReusePortModel** | Enables SO_REUSEPORT where supported by the operating system |
 | **DebugModule** | Enables Gin debug mode |
-| **MaxRequestBodyBytes** | Maximum complete request-body size; zero means unlimited |
+| **MaxRequestBodyBytes** | Maximum complete request-body size; nonpositive means unlimited |
 | **MaxMultipartMemory** | Multipart memory threshold; excess data is stored in temporary files |
 | **HidePanicErrorDetails** | Hides unknown panic details from clients |
 | **PanicResolver** | Converts an error into client-visible text |
-| **DisableBadHTTPCodeResolver** | Disables REST conversion for error HTTP statuses |
+| **DisableBadHTTPCodeResolver** | Disables REST conversion for non-200 HTTP responses |
 | **DisableDefaultIgnoreHTTPCode** | Disables the built-in resolver ignore list |
 | **IgnoreHTTPCode** | Adds HTTP statuses that bypass resolver conversion |
-| **BadHTTPCodeResolver** | Builds responses for non-ignored error statuses |
+| **BadHTTPCodeResolver** | Replaces non-ignored, non-200 responses |
 | **GlobalPreInterceptors** | Global pre-interceptors in registration order |
 | **GlobalPostInterceptors** | Global post-interceptors in registration order |
 | **ResponseBodyEncoder** | Encodes structured response bodies |
@@ -310,9 +312,9 @@ Use **Request.Panic(statusCode, err)** to stop processing with an explicit HTTP 
 - Use **Request** and **Response** for framework-managed request processing.
 - Use **GinContext** only when direct Gin integration is required.
 - The starter owns one server and one Gin engine per process.
-- The server, engine, and resolved configuration are published as one atomic runtime snapshot and remain available until graceful shutdown completes.
+- Treat configuration as fixed after startup. Request and mutable response objects must not be shared across concurrent requests.
 - **MaxMultipartMemory** is not an upload-size limit; use **MaxRequestBodyBytes** for a complete request limit.
-- **RawGinEngine** is only meaningful while the starter is running.
+- **RawGinEngine** returns nil before startup and after completed shutdown; register routes before serving.
 - The standard Gin starter does not allow parent-managed restart after successful shutdown.
 
 ## Testing

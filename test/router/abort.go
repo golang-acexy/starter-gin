@@ -6,15 +6,18 @@ import (
 	"github.com/golang-acexy/starter-gin/ginstarter"
 )
 
+// AbortRouter implements the manual integration example.
 type AbortRouter struct {
 }
 
+// Info returns the example route-group configuration.
 func (a *AbortRouter) Info() *ginstarter.RouterInfo {
 	return &ginstarter.RouterInfo{
 		GroupPath: "abort",
 	}
 }
 
+// Handlers registers example handlers during startup.
 func (a *AbortRouter) Handlers(router *ginstarter.RouterWrapper) {
 	router.GET("invoke", a.invoke())
 	router.GET("panic", a.panic())

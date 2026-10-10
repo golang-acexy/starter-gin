@@ -2,14 +2,16 @@ package router
 
 import "github.com/golang-acexy/starter-gin/ginstarter"
 
+// BasicAuthRouter implements the manual integration example.
 type BasicAuthRouter struct {
 }
 
+// Info returns the example route-group configuration.
 func (a *BasicAuthRouter) Info() *ginstarter.RouterInfo {
 	return &ginstarter.RouterInfo{
 		GroupPath: "auth",
 
-		// 为该路由添加中间件
+		// Attach a pre-interceptor to this route group.
 		PreInterceptors: []ginstarter.PreInterceptor{
 			ginstarter.BasicAuthInterceptor(&ginstarter.BasicAuthAccount{
 				Username: "acexy",
@@ -19,6 +21,7 @@ func (a *BasicAuthRouter) Info() *ginstarter.RouterInfo {
 	}
 }
 
+// Handlers registers example handlers during startup.
 func (a *BasicAuthRouter) Handlers(router *ginstarter.RouterWrapper) {
 	router.GET("invoke", a.invoke())
 }

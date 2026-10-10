@@ -5,20 +5,22 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// RouterInfo defines a group and request interceptors; keep it stable while serving.
 type RouterInfo struct {
-	// GroupPath 路由分组路径
+	// GroupPath prefixes registered route paths.
 	GroupPath string
 
-	// 该Router下的前置拦截器
+	// PreInterceptors execute in order; nonnil Response/error short-circuits this scope.
 	PreInterceptors []PreInterceptor
-	// 该Router下的后置拦截器
+	// PostInterceptors execute in order, including after a route-scope short circuit.
 	PostInterceptors []PostInterceptor
 }
 
+// Router describes application routes registered synchronously during startup.
 type Router interface {
-	// Info 定义路由信息
+	// Info returns nonnil group information; startup filters nil interceptor entries in place.
 	Info() *RouterInfo
-	// Handlers 注册处理器
+	// Handlers registers routes before serving; it must not retain the wrapper for concurrent registration.
 	Handlers(router *RouterWrapper)
 }
 

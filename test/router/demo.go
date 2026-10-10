@@ -9,25 +9,28 @@ import (
 	"github.com/golang-acexy/starter-gin/ginstarter"
 )
 
+// DemoRouter implements the manual integration example.
 type DemoRouter struct {
 }
 
+// Info returns the example route-group configuration.
 func (d *DemoRouter) Info() *ginstarter.RouterInfo {
 	return &ginstarter.RouterInfo{
 		GroupPath: "demo",
 	}
 }
 
+// Handlers registers example handlers during startup.
 func (d *DemoRouter) Handlers(router *ginstarter.RouterWrapper) {
 
 	router.MATCH([]string{http.MethodGet, http.MethodPost}, "more", d.more())
 
-	// path /demo/exception 主动返回的异常触发系统错误
+	// The /demo/exception route demonstrates returned-error recovery.
 	router.GET("error1", d.error1())
 	router.GET("error2", d.error2())
 	router.GET("error3", d.error3())
 
-	// path /demo/hold 5s的请求hold
+	// The /demo/hold route delays completion for five seconds.
 	router.GET("hold", d.hold())
 
 	router.GET("empty", d.empty())
@@ -39,7 +42,7 @@ func (d *DemoRouter) Handlers(router *ginstarter.RouterWrapper) {
 func (d *DemoRouter) more() ginstarter.HandlerWrapper {
 	return func(request *ginstarter.Request) (ginstarter.Response, error) {
 		fmt.Println("invoke")
-		// 通过Builder来响应自定义Rest数据 并设置其他http属性
+		// Build a custom REST body with additional HTTP metadata.
 		return ginstarter.NewRespRest().DataBuilder(func() *ginstarter.ResponseEntity {
 			return ginstarter.NewEmptyResponseEntity().SetStatusCode(http.StatusAccepted).SetBody([]byte("success")).AddHeader("test", "test")
 		}), nil
@@ -48,21 +51,21 @@ func (d *DemoRouter) more() ginstarter.HandlerWrapper {
 
 func (d *DemoRouter) error1() ginstarter.HandlerWrapper {
 	return func(request *ginstarter.Request) (ginstarter.Response, error) {
-		// 通过error响应异常请求
+		// Return an error to enter recovery.
 		return nil, errors.New("return error")
 	}
 }
 
 func (d *DemoRouter) error2() ginstarter.HandlerWrapper {
 	return func(request *ginstarter.Request) (ginstarter.Response, error) {
-		// 通过未处理的崩溃触发异常
+		// Demonstrate recovery from an unhandled panic.
 		panic("panic exception")
 	}
 }
 
 func (d *DemoRouter) error3() ginstarter.HandlerWrapper {
 	return func(request *ginstarter.Request) (ginstarter.Response, error) {
-		// 通过未处理的崩溃触发异常
+		// Demonstrate recovery from an unhandled panic.
 		ii := 1
 		ii -= 1
 		i := 1 / ii

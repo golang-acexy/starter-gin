@@ -19,91 +19,77 @@ var ginRuntimeState atomic.Pointer[ginRuntime]
 var ginLifecycleLock sync.Mutex
 
 type ginRuntime struct {
-	server *http.Server
-	engine *gin.Engine
-	config *GinConfig
+	server   *http.Server
+	engine   *gin.Engine
+	config   *GinConfig
 	stopping atomic.Bool
 }
 
+// GinConfig configures the singleton server. Treat configuration and callback state as
+// immutable after startup; callbacks can execute concurrently for different requests.
 type GinConfig struct {
-
-	// 模块组件在启动时执行初始化
+	// InitFunc is invoked by the parent loader after startup using the default Setting.
 	InitFunc func(instance *gin.Engine)
-
-	// * 注册业务路由
+	// Routers registers business routes during startup; nil entries are ignored.
 	Routers []Router
-
-	// * 注册服务监听地址 :8080 (默认)
-	ListenAddress string // ip:port
-
-	// 启用ReusePortModel 使用 SO_REUSEPORT 实现 多个进程监听同一端口，基于操作系统内核实现负载均衡
-	// 该功能受操作系统影响 win可能不支持， mac 只支持端口复用不能负载 linux支持负载加复用
+	// ListenAddress is the TCP listen address; an empty value defaults to :8080.
+	ListenAddress string
+	// UseReusePortModel enables SO_REUSEPORT where supported by the operating system.
 	UseReusePortModel bool
-
-	// 默认情况系统会将捕获的异常详细发给PanicResolver处理，如果不想将细节暴露向外
-	// 方案 1. 启用隐藏异常细节功能，系统不会向客户端暴露未知异常信息，但会保留明确指定的HTTP状态码
-	// 方案 2. 如果不想禁用异常时调用PanicResolver, 可以在初始化时手动设置自定义PanicResolver处理器
-	// * panic 将被分为框架内部错误和框架未知错误 框架内部错误是非敏感错误，不受该参数控制，每次都会触发PanicResolver，例如验证框架错误
+	// HidePanicErrorDetails hides unknown panic text but preserves explicitly assigned
+	// HTTP status codes. Framework validation messages remain visible.
 	HidePanicErrorDetails bool
-	// 全局异常响应处理器 如果不指定则使用默认方式
+	// PanicResolver converts recovered errors to client-visible text. It must not panic.
 	PanicResolver PanicResolver
-
-	// 禁用异常http响应码Resolver
+	// DisableBadHTTPCodeResolver preserves non-200 responses without REST conversion.
 	DisableBadHTTPCodeResolver bool
-	// 禁用系统内置的忽略异常响应码
+	// DisableDefaultIgnoreHTTPCode removes the built-in redirect/no-content ignore list.
 	DisableDefaultIgnoreHTTPCode bool
-	// 启用异常http响应码Resolver 指定不处理特定的异常响应码
+	// IgnoreHTTPCode adds statuses that bypass conversion, even when defaults are disabled.
 	IgnoreHTTPCode []int
-	// 启用异常http响应码Resolver 如果不指定则使用默认方式
+	// BadHTTPCodeResolver replaces the entire non-ignored, non-200 response.
+	// Preserve desired entity headers and cookies explicitly; this callback must not panic.
 	BadHTTPCodeResolver BadHTTPCodeResolver
-
-	// GlobalPreInterceptors 全局前置拦截器。
-	// 在路由前置拦截器和业务 Handler 之前，按照切片注册顺序执行。
-	// 任一拦截器返回非空 Response 或 error 时，将终止后续前置拦截器和 Handler；
-	// 此时不会进入路由拦截器链，但仍会执行全局后置拦截器，并由框架统一写入最终 Response。
+	// GlobalPreInterceptors run before route interceptors and handlers in registration order.
+	// A nonnil Response or error skips the remaining pre-list and route scope; global posts
+	// still run. Returning nil, nil continues, including after native writes or Gin Abort.
 	GlobalPreInterceptors []PreInterceptor
-
-	// GlobalPostInterceptors 全局后置拦截器。
-	// 在路由后置拦截器执行完成后，按照切片注册顺序执行。
-	// 每个拦截器接收当前 Response：返回非空 Response 时替换当前响应，返回 nil 时保留当前响应；
-	// 返回 error 时将其转换为异常 Response，并终止剩余的全局后置拦截器。
-	// 全部执行完成后，由框架统一写入最终 Response。
+	// GlobalPostInterceptors run after route posts in registration order. A nonnil Response
+	// replaces the current response; nil retains it. An error stops this post-list.
 	GlobalPostInterceptors []PostInterceptor
-
-	// ResponseBodyEncoder 响应正文编码器，默认使用 JSON 编码。
-	// NewRespRest 使用该编码器将结构化正文编码为字节数据。
-	// 如果自实现 Response 接口并直接提供字节正文，则不会使用该编码器。
+	// ResponseBodyEncoder encodes structured bodies; nil selects JSON. Raw byte bodies
+	// bypass it. JSON-marked responses retain that media type after custom encoding.
 	ResponseBodyEncoder ResponseBodyEncoder
-
-	// 启用TraceId响应
+	// TraceIDResponse supplies the Trace-Id header at final write time. It receives no
+	// request argument, must support concurrent calls, and must not panic.
 	TraceIDResponse func() string
-
-	// ========== gin config
+	// DebugModule sets Gin's process-wide debug mode; false selects release mode.
 	DebugModule bool
-	// MaxMultipartMemory multipart 表单解析时允许保存在内存中的最大字节数，超出部分写入临时文件。
+	// MaxMultipartMemory is the in-memory multipart threshold, not a body-size limit.
+	// Nonpositive values retain Gin's default threshold; larger parts use temporary files.
 	MaxMultipartMemory int64
-	// MaxRequestBodyBytes 请求正文最大字节数，零值表示不限制。
+	// MaxRequestBodyBytes limits request-body reads; nonpositive values mean unlimited.
 	MaxRequestBodyBytes int64
-
-	// 关闭包裹405错误展示，使用404代替
+	// DisableMethodNotAllowedError uses not-found handling instead of method-not-allowed.
 	DisableMethodNotAllowedError bool
-
-	// 禁用尝试获取转发真实IP
+	// DisableForwardedByClientIP disables forwarded-client-IP resolution in Gin.
 	DisableForwardedByClientIP bool
 }
 
+// GinStarter owns the process-wide Gin server. Configure it before parent startup;
+// setting fields or registering routes while serving requests is not supported.
 type GinStarter struct {
-	// GinConfig 配置
+	// Config supplies static configuration when LazyConfig is nil.
 	Config GinConfig
-	// 懒加载函数，用于在实际执行时动态获取配置 该权重高于Config的直接配置
+	// LazyConfig takes precedence over Config and is evaluated once on first resolution.
 	LazyConfig func() GinConfig
 	config     *GinConfig
 	configOnce sync.Once
-	// 自定义Gin模块的组件属性
+	// GinSetting overrides the default parent lifecycle setting, including its init hook.
 	GinSetting *parent.Setting
 }
 
-// 获取配置信息
+// getConfig resolves and caches configuration once.
 func (g *GinStarter) getConfig() *GinConfig {
 	g.configOnce.Do(func() {
 		if g.LazyConfig != nil {
@@ -117,6 +103,7 @@ func (g *GinStarter) getConfig() *GinConfig {
 	return g.config
 }
 
+// Setting returns the custom setting or a default non-restartable parent setting.
 func (g *GinStarter) Setting() *parent.Setting {
 	if g.GinSetting != nil {
 		return g.GinSetting
@@ -135,6 +122,8 @@ func (g *GinStarter) Setting() *parent.Setting {
 		})
 }
 
+// Start registers routes and begins serving; an active singleton returns ErrGinStarterAlreadyStarted.
+// The returned engine is shared. Use the parent loader to invoke the configured init hook.
 func (g *GinStarter) Start() (any, error) {
 	var err error
 	ginLifecycleLock.Lock()
@@ -182,9 +171,9 @@ func (g *GinStarter) Start() (any, error) {
 	config.GlobalPostInterceptors = coll.SliceFilter(config.GlobalPostInterceptors, func(p PostInterceptor) bool {
 		return p != nil
 	})
-	// 响应管道必须位于最外层，负责一次性提交最终 Response。
+	// Install the response pipeline outermost so it commits the final Response once.
 	ginEngine.Use(responsePipelineHandler())
-	// 全局前置与后置拦截器使用同一中间件，确保前置短路时仍会执行对应后置拦截器。
+	// Keep pre/post interceptors in one scope so posts still run after pre-list short-circuiting.
 	ginEngine.Use(func(ctx *gin.Context) {
 		defer recoverResponse(ctx)
 		state := getRequestState(ctx)
@@ -242,6 +231,8 @@ func (g *GinStarter) Start() (any, error) {
 	return ginEngine, nil
 }
 
+// Stop attempts graceful shutdown within maxWaitTime; a failed shutdown keeps runtime state.
+// An absent or already-stopping server returns ErrGinServerNotStarted. Nonpositive waits set an expired deadline.
 func (g *GinStarter) Stop(maxWaitTime time.Duration) (gracefully, stopped bool, err error) {
 	ginLifecycleLock.Lock()
 	runtime := ginRuntimeState.Load()
@@ -270,7 +261,8 @@ func (g *GinStarter) Stop(maxWaitTime time.Duration) (gracefully, stopped bool, 
 	return
 }
 
-// RawGinEngine 获取原始的gin引擎实例
+// RawGinEngine returns the shared engine, or nil before startup and after successful shutdown.
+// It remains available during shutdown; do not mutate route registration while requests are served.
 func RawGinEngine() *gin.Engine {
 	runtime := ginRuntimeState.Load()
 	if runtime == nil {
