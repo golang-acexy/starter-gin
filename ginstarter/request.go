@@ -179,7 +179,7 @@ func (r *Request) MustBindQueryParams(object any) {
 // BindBodyJSON decodes cached body bytes with Gin JSON binding and validation.
 // Repeated reads are supported; binding may partially mutate the caller-owned destination on error.
 func (r *Request) BindBodyJSON(object any) error {
-	body, err := r.GetRawBodyData()
+	body, err := r.cachedBodyData()
 	if err != nil {
 		return err
 	}
@@ -225,9 +225,19 @@ func (r *Request) MustBindBodyForm(object any) {
 // GetRawBodyData returns a copy of cached body bytes and resets the reader after a successful first read.
 // Read errors are returned without caching partial data; an absent body returns empty bytes.
 func (r *Request) GetRawBodyData() ([]byte, error) {
+	body, err := r.cachedBodyData()
+	if err != nil {
+		return nil, err
+	}
+	return bytes.Clone(body), nil
+}
+
+// cachedBodyData borrows immutable bytes shared by the cache and replay reader.
+// Internal callers must not mutate or expose this slice to application code.
+func (r *Request) cachedBodyData() ([]byte, error) {
 	if cachedBody, exists := r.ctx.Get(ginCtxKeyRequestBody); exists {
 		if body, ok := cachedBody.([]byte); ok {
-			return bytes.Clone(body), nil
+			return body, nil
 		}
 	}
 	if r.ctx.Request.Body == nil {
@@ -237,9 +247,9 @@ func (r *Request) GetRawBodyData() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	r.ctx.Set(ginCtxKeyRequestBody, bytes.Clone(body))
+	r.ctx.Set(ginCtxKeyRequestBody, body)
 	r.ctx.Request.Body = io.NopCloser(bytes.NewReader(body))
-	return bytes.Clone(body), nil
+	return body, nil
 }
 
 // BindBodyAuto selects JSON, urlencoded, or multipart from Content-Type; malformed/unsupported media types return an error.
